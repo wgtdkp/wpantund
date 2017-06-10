@@ -25,13 +25,11 @@
 
 #include <dbus/dbus.h>
 
-#include <boost/bind.hpp>
 #include <boost/any.hpp>
 #include <boost/function.hpp>
 
 #include "NetworkInstance.h"
 #include "NCPTypes.h"
-#include "Data.h"
 #include "time-utils.h"
 
 namespace nl {
@@ -93,6 +91,15 @@ private:
 		DBusMessage *        message
 	);
 
+	DBusHandlerResult interface_eidcache_add_handler(
+		NCPControlInterface* interface,
+		DBusMessage *        message
+	);
+
+	DBusHandlerResult interface_eidcache_remove_handler(
+		NCPControlInterface* interface,
+		DBusMessage *        message
+	);
 	DBusHandlerResult interface_reset_handler(
 		NCPControlInterface* interface,
 		DBusMessage *        message

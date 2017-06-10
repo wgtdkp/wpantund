@@ -93,6 +93,9 @@
 #define kWPANTUNDProperty_IPv6InterfaceRoutes                   "IPv6:Routes"
 #define kWPANTUNDProperty_IPv6SetSLAACForAutoAddedPrefix        "IPv6:SetSLAACForAutoAddedPrefix"
 
+#define kWPANTUNDProperty_StreamNet                             "StreamNet:Secure"
+#define kWPANTUNDProperty_StreamNetInsecure                     "StreamNet:InSecure"
+
 #define kWPANTUNDProperty_ThreadRLOC16                          "Thread:RLOC16"
 #define kWPANTUNDProperty_ThreadRouterID                        "Thread:RouterID"
 #define kWPANTUNDProperty_ThreadRouterSelectionJitter           "Thread:RouterSelectionJitter"
@@ -132,6 +135,11 @@
 #define kWPANTUNDProperty_ThreadAddressCacheTableAsValMap       "Thread:AddressCacheTable:AsValMap"
 #define kWPANTUNDProperty_ThreadParent                          "Thread:Parent"
 #define kWPANTUNDProperty_ThreadParentAsValMap                  "Thread:Parent:AsValMap"
+#define kWPANTUNDProperty_ThreadBBRSequenceNumber               "Thread:BBRSequenceNumber"
+#define kWPANTUNDProperty_ThreadBBRRegistrationDelay            "Thread:BBRRegistrationDelay"
+#define kWPANTUNDProperty_ThreadBBRMLRTimeout                   "Thread:BBRMLRTimeout"
+#define kWPANTUNDProperty_ThreadArpEidCacheEntries              "Thread:ARP:EidCache:Entries"
+#define kWPANTUNDProperty_ThreadArpEidCacheEntriesAsValMap      "Thread:ARP:EidCache:Entries:AsValMap"
 
 #define kWPANTUNDProperty_DatasetActiveTimestamp                "Dataset:ActiveTimestamp"
 #define kWPANTUNDProperty_DatasetPendingTimestamp               "Dataset:PendingTimestamp"
@@ -226,6 +234,8 @@
 #define kWPANTUNDCommissionerState_Petition                     "petition"
 #define kWPANTUNDCommissionerState_Active                       "active"
 
+#define kWPANTUNDProperty_ThreadAddressErrorNotification        "Thread:AddressErrorNotification"
+
 #define kWPANTUNDProperty_NestLabs_NetworkAllowingJoin          "com.nestlabs.internal:Network:AllowingJoin"
 #define kWPANTUNDProperty_NestLabs_NetworkPassthruPort          "com.nestlabs.internal:Network:PassthruPort"
 #define kWPANTUNDProperty_NestLabs_NCPTransmitHookActive        "com.nestlabs.internal:NCP:TransmitHookActive"
@@ -313,6 +323,10 @@
 // ----------------------------------------------------------------------------
 
 // Values for value map keys
+
+#define kWPANTUNDValueMapKey_EidCache_Address                   "Address"
+#define kWPANTUNDValueMapKey_EidCache_Iid                       "Iid"
+#define kWPANTUNDValueMapKey_EidCache_Rloc                      "Rloc"
 
 #define kWPANTUNDValueMapKey_Whitelist_ExtAddress               "ExtAddress"
 #define kWPANTUNDValueMapKey_Whitelist_Rssi                     "FixedRssi"

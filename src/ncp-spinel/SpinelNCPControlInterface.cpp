@@ -280,6 +280,48 @@ bail:
 	return;
 }
 
+void
+SpinelNCPControlInterface::add_eidcache(
+	const struct in6_addr *address,
+	const uint8_t **iid,
+	uint16_t rloc,
+	CallbackWithStatus cb
+) {
+	require_action(address != NULL, bail, cb(kWPANTUNDStatus_InvalidArgument));
+	require_action(iid != NULL, bail, cb(kWPANTUNDStatus_InvalidArgument));
+	require_action(rloc != 0xffff, bail, cb(kWPANTUNDStatus_InvalidArgument));
+	require_action(mNCPInstance->mEnabled, bail, cb(kWPANTUNDStatus_InvalidWhenDisabled));
+
+	mNCPInstance->eidcache_was_added(
+		SpinelNCPInstance::kOriginUser,
+		*address,
+		iid,
+		rloc,
+		cb
+	);
+
+bail:
+	return;
+}
+
+void
+SpinelNCPControlInterface::remove_eidcache(
+	const struct in6_addr *address,
+	CallbackWithStatus cb
+) {
+	require_action(address != NULL, bail, cb(kWPANTUNDStatus_InvalidArgument));
+	require_action(mNCPInstance->mEnabled, bail, cb(kWPANTUNDStatus_InvalidWhenDisabled));
+
+	mNCPInstance->eidcache_was_removed(
+		SpinelNCPInstance::kOriginUser,
+		*address,
+		cb
+	);
+
+bail:
+	return;
+}
+
 /*
 void
 SpinelNCPControlInterface::joiner_add(

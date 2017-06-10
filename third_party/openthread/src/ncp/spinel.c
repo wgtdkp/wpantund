@@ -1497,6 +1497,10 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_THREAD_UDP_PROXY_STREAM";
         break;
 
+    case SPINEL_PROP_THREAD_ADDRESS_ERROR_NOTIFICATION:
+        ret = "PROP_THREAD_ADDRESS_ERROR_NOTIFICATION";
+	break;
+
     case SPINEL_PROP_THREAD_DISCOVERY_SCAN_JOINER_FLAG:
         ret = "PROP_THREAD_DISCOVERY_SCAN_JOINER_FLAG";
         break;
@@ -1531,6 +1535,22 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
 
     case SPINEL_PROP_THREAD_MGMT_SET_PENDING_DATASET:
         ret = "PROP_THREAD_MGMT_SET_PENDING_DATASET";
+        break;
+
+    case SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER:
+        ret = "PROP_THREAD_BBR_SEQUENCE_NUMBER";
+        break;
+
+    case SPINEL_PROP_THREAD_BBR_REGISTER_DELAY:
+        ret = "PROP_THREAD_BBR_REGISTGER_DELAY";
+        break;
+
+    case SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT:
+        ret = "PROP_THREAD_BBR_MLR_TIMEOUT";
+        break;
+
+    case SPINEL_PROP_THREAD_ARP_EIDCACHE:
+        ret = "PROP_THREAD_ARP_EIDCACHE";
         break;
 
     case SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP:

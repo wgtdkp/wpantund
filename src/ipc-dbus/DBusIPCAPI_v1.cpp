@@ -79,6 +79,9 @@ DBusIPCAPI_v1::init_callback_tables()
 	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_ROUTE_ADD, interface_route_add_handler);
 	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_ROUTE_REMOVE, interface_route_remove_handler);
 
+	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_EIDCACHE_ADD, interface_eidcache_add_handler);
+	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_EIDCACHE_REMOVE, interface_eidcache_remove_handler);
+
 	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_DATA_POLL, interface_data_poll_handler);
 	INTERFACE_CALLBACK_CONNECT(WPANTUND_IF_CMD_CONFIG_GATEWAY, interface_config_gateway_handler);
 
@@ -1816,4 +1819,90 @@ DBusIPCAPI_v1::dbus_message_handler(
 	return cb_data->second->message_handler(cb_data->first,
 	                                                  connection,
 	                                                  message);
+}
+
+DBusHandlerResult
+DBusIPCAPI_v1::interface_eidcache_add_handler(
+   NCPControlInterface* interface,
+   DBusMessage *        message
+) {
+	DBusHandlerResult ret = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+	dbus_message_ref(message);
+
+	uint8_t *address_ptr(NULL);
+	int  address_len = 0;
+	uint8_t *iid_ptr(NULL);
+	int  iid_len = 0;
+	uint16_t rloc(0xffff);
+	struct in6_addr address = {};
+	uint8_t iid[8] = {0};
+	const uint8_t *ptr = iid;
+	bool did_succeed(false);
+
+	did_succeed = dbus_message_get_args(
+		message, NULL,
+		DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &address_ptr, &address_len,
+		DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &iid_ptr, &iid_len,
+		DBUS_TYPE_UINT16, &rloc,
+		DBUS_TYPE_INVALID
+	);
+
+	require(did_succeed, bail);
+
+	memcpy(address.s6_addr, address_ptr, address_len);
+	memcpy(iid, iid_ptr, iid_len);
+
+	dbus_message_ref(message);
+
+	interface->add_eidcache(
+		&address,
+		&ptr,
+		rloc,
+		boost::bind(&DBusIPCAPI_v1::CallbackWithStatus_Helper, this, _1, message)
+	);
+
+	ret = DBUS_HANDLER_RESULT_HANDLED;
+
+bail:
+
+	return ret;
+}
+
+DBusHandlerResult
+DBusIPCAPI_v1::interface_eidcache_remove_handler(
+   NCPControlInterface* interface,
+   DBusMessage *        message
+) {
+	DBusHandlerResult ret = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+	dbus_message_ref(message);
+
+	uint8_t *bytes(NULL);
+	int count = 0;
+	bool did_succeed(false);
+	struct in6_addr address = {};
+
+	did_succeed = dbus_message_get_args(
+		message, NULL,
+		DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &bytes, &count,
+		DBUS_TYPE_INVALID
+	);
+
+	require(did_succeed, bail);
+
+	memcpy(address.s6_addr, bytes, count);
+
+	dbus_message_ref(message);
+
+	interface->remove_eidcache(
+		&address,
+		boost::bind(&DBusIPCAPI_v1::CallbackWithStatus_Helper, this, _1, message)
+	);
+
+	ret = DBUS_HANDLER_RESULT_HANDLED;
+
+bail:
+
+	return ret;
 }

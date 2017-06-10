@@ -57,7 +57,6 @@ EXTRA_DIST = \
 	string-utils.h \
 	time-utils.h \
 	tunnel.h \
-	CallbackStore.hpp \
 	RingBuffer.h \
 	ValueMap.h \
 	ValueMap.cpp \

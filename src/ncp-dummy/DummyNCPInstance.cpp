@@ -142,3 +142,16 @@ DummyNCPInstance::remove_route_on_ncp(const struct in6_addr &route, uint8_t pref
 {
 	return;
 }
+
+void
+DummyNCPInstance::add_eidcache_on_ncp(const struct in6_addr &address, const uint8_t **iid, uint16_t rloc,
+		CallbackWithStatus cb)
+{
+	return;
+}
+
+void
+DummyNCPInstance::remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb)
+{
+	return;
+}

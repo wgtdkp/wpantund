@@ -163,6 +163,18 @@ public:
 		CallbackWithStatus cb = NilReturn()
 	);
 
+	virtual void add_eidcache(
+		const struct in6_addr *address,
+		const uint8_t **iid,
+		uint16_t rloc,
+		CallbackWithStatus cb = NilReturn()
+	);
+
+	virtual void remove_eidcache(
+		const struct in6_addr *address,
+		CallbackWithStatus cb = NilReturn()
+	);
+
 	virtual void commissioner_add_joiner(
 		const uint8_t *eui64,
 		uint32_t timeout,

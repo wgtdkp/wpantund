@@ -64,6 +64,8 @@ wpanctl_SOURCES = \
 	tool-cmd-host-did-wake.c \
 	tool-cmd-add-route.c \
 	tool-cmd-remove-route.c \
+	tool-cmd-add-eidcache.c \
+	tool-cmd-remove-eidcache.c \
 	tool-updateprop.c \
 	wpanctl-utils.h \
 	commissioner-utils.h \
@@ -91,6 +93,8 @@ wpanctl_SOURCES = \
 	tool-cmd-host-did-wake.h \
 	tool-cmd-add-route.h \
 	tool-cmd-remove-route.h \
+	tool-cmd-add-eidcache.h \
+	tool-cmd-remove-eidcache.h \
 	tool-cmd-pcap.h \
 	tool-cmd-pcap.c \
 	tool-cmd-peek.h \
