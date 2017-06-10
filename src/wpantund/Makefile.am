@@ -95,6 +95,7 @@ SOURCES = \
 	../util/TunnelIPv6Interface.cpp \
 	../util/ValueMap.cpp \
 	../util/Timer.cpp \
+	../util/Signals.cpp \
 	../util/sec-random.c \
 	$(NULL)
 
