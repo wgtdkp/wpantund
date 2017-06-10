@@ -31,7 +31,6 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <boost/signals2/signal.hpp>
 #include <boost/any.hpp>
 #include <list>
 #include <arpa/inet.h>
@@ -49,6 +48,7 @@
 #include "Callbacks.h"
 #include "wpan-properties.h"
 #include "ValueMap.h"
+#include "Signals.h"
 
 namespace nl {
 namespace wpantund {
@@ -205,7 +205,7 @@ public:
 		CallbackWithStatus cb = NilReturn()
 	) = 0;
 
-	boost::signals2::signal<void(const WPAN::NetworkInstance&)> mOnNetScanBeacon;
+	OnNetScanBeacon mOnNetScanBeacon;
 
 public:
 	// ========================================================================
@@ -220,7 +220,7 @@ public:
 		CallbackWithStatus cb = NilReturn()
 	) = 0;
 
-	boost::signals2::signal<void(const EnergyScanResultEntry&)> mOnEnergyScanResult;
+	OnEnergyScanResult mOnEnergyScanResult;
 
 public:
 	// ========================================================================
@@ -295,14 +295,14 @@ public:
 	// Signals
 
 	//! Fires whenever value of certain properties changed (e.g. NodeType).
-	boost::signals2::signal<void(const std::string& key, const boost::any& value)> mOnPropertyChanged;
+	OnPropertyChanged mOnPropertyChanged;
 
 public:
 	// ========================================================================
 	// Nest-Specific Signals
 
 	//! Fires when the network wake state has changed or been updated.
-	boost::signals2::signal<void(uint8_t data, cms_t ms_remaining)> mOnNetWake;
+	OnNetWake mOnNetWake;
 
 protected:
 	// ========================================================================
