@@ -57,7 +57,6 @@ EXTRA_DIST = \
 	string-utils.h \
 	time-utils.h \
 	tunnel.h \
-	CallbackStore.hpp \
 	RingBuffer.h \
 	ValueMap.h \
 	ValueMap.cpp \
@@ -67,6 +66,8 @@ EXTRA_DIST = \
 	sec-random.h \
 	sec-random.c \
 	commissioner-utils.h \
+	Signals.h \
+	Signals.cpp \
 	$(NULL)
 
 DISTCLEANFILES = \
