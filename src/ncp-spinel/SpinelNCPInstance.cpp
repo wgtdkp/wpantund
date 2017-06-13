@@ -2321,6 +2321,12 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		}
 		update_mesh_local_address(addr);
 
+	} else if (key == SPINEL_PROP_THREAD_RLOC16) {
+		uint16_t rloc16;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT16_S, &rloc16);
+		signal_property_changed(kWPANTUNDProperty_ThreadRLOC16, rloc16);
+
+		syslog(LOG_INFO, "rloc16 changed");
 	} else if (key == SPINEL_PROP_IPV6_ML_PREFIX) {
 		struct in6_addr *addr = NULL;
 		spinel_datatype_unpack(value_data_ptr, value_data_len, "6", &addr);
@@ -2828,6 +2834,9 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		char net_data_cstr_buf[540];
 		encode_data_into_string(value_data_ptr, value_data_len, net_data_cstr_buf, sizeof(net_data_cstr_buf), 0);
 		syslog(LOG_INFO, "[-NCP-] Leader network data: [%s]", net_data_cstr_buf);
+		Data data;
+		data.append(value_data_ptr, value_data_len);
+		signal_property_changed(kWPANTUNDProperty_ThreadLeaderNetworkData, data);
 	}
 
 bail:
