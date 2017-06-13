@@ -35,6 +35,7 @@
 #include <set>
 #include "IPv6Helpers.h"
 #include "Signals.h"
+#include <boost/signals2/signal.hpp>
 
 class TunnelIPv6Interface : public nl::UnixSocket
 {
