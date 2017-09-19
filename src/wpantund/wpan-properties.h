@@ -83,6 +83,9 @@
 #define kWPANTUNDProperty_IPv6AllAddresses                      "IPv6:AllAddresses"
 #define kWPANTUNDProperty_IPv6MulticastAddresses                "IPv6:MulticastAddresses"
 
+#define kWPANTUNDProperty_StreamNet                             "StreamNet:Secure"
+#define kWPANTUNDProperty_StreamNetInsecure                     "StreamNet:InSecure"
+
 #define kWPANTUNDProperty_ThreadRLOC16                          "Thread:RLOC16"
 #define kWPANTUNDProperty_ThreadRouterID                        "Thread:RouterID"
 #define kWPANTUNDProperty_ThreadLeaderAddress                   "Thread:Leader:Address"

@@ -1562,11 +1562,24 @@ SpinelNCPInstance::property_set_value(
 					.finish()
 					);
 
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_StreamNet)) {
+		Data packet = any_to_data(value);
+        uint16_t rloc16 = (packet[packet.size() - sizeof(rloc16)] << 8 | packet[packet.size() - sizeof(rloc16) + 1]); 
+
+        packet.resize(packet.size() - sizeof(rloc16));
+
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_WLEN_S SPINEL_DATATYPE_DATA_S), SPINEL_PROP_STREAM_NET, packet.data(), packet.size(), &rloc16, sizeof(rloc16));
+//		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_WLEN_S), SPINEL_PROP_STREAM_NET, packet.data(), packet.size());
+
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(command)
+				.finish()
+				);
 		} else {
 			NCPInstanceBase::property_set_value(key, value, cb);
 		}
-
-	} catch (const boost::bad_any_cast &x) {
+	} 	catch (const boost::bad_any_cast &x) {
 		// We will get a bad_any_cast exception if the property is of
 		// the wrong type.
 		syslog(LOG_ERR,"property_set_value: Bad type for property \"%s\" (%s)", key.c_str(), x.what());
