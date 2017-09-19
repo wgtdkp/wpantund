@@ -240,11 +240,31 @@ bail:
 void
 NCPInstanceBase::handle_normal_ipv6_from_ncp(const uint8_t* ip_packet, size_t packet_length)
 {
+    uint8_t domainPrefix[8] = {0xfd, 0x00, 0x7d, 0x03, 0x7d, 0x03, 0x7d, 0x03};
+    uint8_t dstOffset = 24;
+    syslog(LOG_INFO, "[NCP->] Dst %2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:",
+		    ip_packet[dstOffset], ip_packet[dstOffset+1], ip_packet[dstOffset+2], ip_packet[dstOffset+3],
+                    ip_packet[dstOffset+4], ip_packet[dstOffset+5], ip_packet[dstOffset+6], ip_packet[dstOffset+7],
+                    ip_packet[dstOffset+8], ip_packet[dstOffset+9], ip_packet[dstOffset+10], ip_packet[dstOffset+11],
+                    ip_packet[dstOffset+9], ip_packet[dstOffset+10], ip_packet[dstOffset+14], ip_packet[dstOffset+15]);
+
+    if (memcmp(domainPrefix, (ip_packet + dstOffset), sizeof(domainPrefix)) == 0)
+    {
+        signal_property_changed(kWPANTUNDProperty_StreamNet, ip_packet);
+		syslog(LOG_INFO, "[NCP->] IPv6 packet to host bbr by StreamNet event!");
+    }
+    else
+    {
 	ssize_t ret = mPrimaryInterface->write(ip_packet, packet_length);
 
 	if (ret != packet_length) {
 		syslog(LOG_INFO, "[NCP->] IPv6 packet refused by host stack! (ret = %ld)", (long)ret);
 	}
+	else
+	{
+		syslog(LOG_INFO, "[NCP->] IPv6 packet to host pump!");
+	}
+    }
 }
 
 void

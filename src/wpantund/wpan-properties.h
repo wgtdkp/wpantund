@@ -90,6 +90,9 @@
 #define kWPANTUNDProperty_IPv6InterfaceRoutes                   "IPv6:Routes"
 #define kWPANTUNDProperty_IPv6SetSLAACForAutoAddedPrefix        "IPv6:SetSLAACForAutoAddedPrefix"
 
+#define kWPANTUNDProperty_StreamNet                             "StreamNet:Secure"
+#define kWPANTUNDProperty_StreamNetInsecure                     "StreamNet:InSecure"
+
 #define kWPANTUNDProperty_ThreadRLOC16                          "Thread:RLOC16"
 #define kWPANTUNDProperty_ThreadRouterID                        "Thread:RouterID"
 #define kWPANTUNDProperty_ThreadLeaderAddress                   "Thread:Leader:Address"
