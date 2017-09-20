@@ -240,11 +240,15 @@ bail:
 void
 NCPInstanceBase::handle_normal_ipv6_from_ncp(const uint8_t* ip_packet, size_t packet_length)
 {
-	ssize_t ret = mPrimaryInterface->write(ip_packet, packet_length);
+	/* 
+	   ssize_t ret = mPrimaryInterface->write(ip_packet, packet_length);
 
-	if (ret != packet_length) {
-		syslog(LOG_INFO, "[NCP->] IPv6 packet refused by host stack! (ret = %ld)", (long)ret);
-	}
+	   if (ret != packet_length) {
+	   syslog(LOG_INFO, "[NCP->] IPv6 packet refused by host stack! (ret = %ld)", (long)ret);
+	   }
+	   */
+	signal_property_changed(kWPANTUNDProperty_StreamNet, data);
+	syslog(LOG_INFO, "[NCP->] IPv6 packet to host");
 }
 
 void
