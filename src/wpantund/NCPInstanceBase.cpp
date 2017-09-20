@@ -171,6 +171,20 @@ NCPInstanceBase::NCPInstanceBase(const Settings& settings):
 		mDropFirewall.insert(rule);
 		rule.subtype = IPv6PacketMatcherRule::SUBTYPE_ICMP_REDIRECT;
 		mDropFirewall.insert(rule);
+
+        // filter out domain prefix traffic which would be handled by host
+        rule.type = IPv6PacketMatcherRule::TYPE_ALL;
+        rule.remote_address.s6_addr[0x0] = 0xfd;
+        rule.remote_address.s6_addr[0x1] = 0x00;
+        rule.remote_address.s6_addr[0x2] = 0x7d;
+        rule.remote_address.s6_addr[0x3] = 0x03;
+        rule.remote_address.s6_addr[0x4] = 0x7d;
+        rule.remote_address.s6_addr[0x5] = 0x03;
+        rule.remote_address.s6_addr[0x6] = 0x7d;
+        rule.remote_address.s6_addr[0x7] = 0x03;
+        rule.remote_address.s6_addr[0xF] = 0x0;
+        rule.remote_match_mask = 64,
+		mDropFirewall.insert(rule);
 	}
 }
 
