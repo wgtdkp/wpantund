@@ -250,8 +250,8 @@ NCPInstanceBase::handle_normal_ipv6_from_ncp(const uint8_t* ip_packet, size_t pa
 
     if (memcmp(domainPrefix, (ip_packet + dstOffset), sizeof(domainPrefix)) == 0)
     {
-        signal_property_changed(kWPANTUNDProperty_StreamNet, data);
-	syslog(LOG_INFO, "[NCP->] IPv6 packet to host bbr by StreamNet event!");
+        signal_property_changed(kWPANTUNDProperty_StreamNet, ip_packet);
+		syslog(LOG_INFO, "[NCP->] IPv6 packet to host bbr by StreamNet event!");
     }
     else
     {
