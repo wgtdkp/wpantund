@@ -1517,6 +1517,18 @@ spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_THREAD_MGMT_PENDING_DATASET";
         break;
 
+    case SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER:
+        ret = "PROP_THREAD_BBR_SEQUENCE_NUMBER";
+        break;
+
+    case SPINEL_PROP_THREAD_BBR_REGISTER_DELAY:
+        ret = "PROP_THREAD_BBR_REGISTGER_DELAY";
+        break;
+
+    case SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT:
+        ret = "PROP_THREAD_BBR_MLR_TIMEOUT";
+        break;
+
     case SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP:
         ret = "PROP_DATASET_ACTIVE_TIMESTAMP";
         break;
