@@ -985,6 +985,18 @@ SpinelNCPInstance::property_get_value(
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_NetworkPartitionId)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_NET_PARTITION_ID, SPINEL_DATATYPE_UINT32_S);
 
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadRouterSelectionJitter)) {
+		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, SPINEL_DATATYPE_UINT8_S);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
+		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, SPINEL_DATATYPE_UINT8_S);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, SPINEL_DATATYPE_UINT32_S);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
+		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT, SPINEL_DATATYPE_UINT32_S);
+
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_NCPRSSI)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_PHY_RSSI, SPINEL_DATATYPE_INT8_S);
 
@@ -2168,6 +2180,57 @@ SpinelNCPInstance::property_set_value(
 		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_DatasetCommand)) {
 			perform_dataset_command(any_to_string(value), cb);
 
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadRouterSelectionJitter)) {
+			uint8_t jitter = static_cast<uint8_t>(any_to_int(value));
+			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, jitter);
+
+			mSettings[kWPANTUNDProperty_ThreadRouterSelectionJitter] = SettingsEntry(command);
+
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(command)
+				.finish()
+			);
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
+			uint8_t seqno = any_to_int(value);
+			SpinelNCPTaskSendCommand::Factory factory(this);
+			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, seqno);
+
+			syslog(LOG_NOTICE, "Updating local bbr sequence number");
+
+			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+			factory.set_callback(cb);
+
+			factory.add_command(command);
+			mSettings[kWPANTUNDProperty_ThreadBBRSequenceNumber] = SettingsEntry(command);
+
+			start_new_task(factory.finish());
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+			uint32_t delay = any_to_int(value);
+			SpinelNCPTaskSendCommand::Factory factory(this);
+			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, delay);
+
+			syslog(LOG_NOTICE, "Updating local bbr register delay");
+
+			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+			factory.set_callback(cb);
+
+			factory.add_command(command);
+			mSettings[kWPANTUNDProperty_ThreadBBRRegisterDelay] = SettingsEntry(command);
+			start_new_task(factory.finish());
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
+			uint32_t timeout = any_to_int(value);
+			SpinelNCPTaskSendCommand::Factory factory(this);
+			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT, timeout);
+
+			syslog(LOG_NOTICE, "Updating local bbr mlr timeout");
+
+			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+			factory.set_callback(cb);
+
+			factory.add_command(command);
+			mSettings[kWPANTUNDProperty_ThreadBBRMLRTimeout] = SettingsEntry(command);
+			start_new_task(factory.finish());
 		} else {
 			NCPInstanceBase::property_set_value(key, value, cb);
 		}
@@ -3080,6 +3143,25 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		Data data;
 		data.append(value_data_ptr, value_data_len);
 		signal_property_changed(kWPANTUNDProperty_ThreadLeaderNetworkData, data);
+	} else if (key == SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER) {
+		uint8_t jitter= 0;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT8_S, &jitter);
+		syslog(LOG_INFO, "[-NCP-] RouterSelectionJitter: %u (0x%x)", jitter, jitter);
+		//signal_property_changed(kWPANTUNDProperty_ThreadRouterSelecionitter, data);
+	} else if (key == SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER) {
+		uint8_t seqno = 0;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT8_S, &seqno);
+		syslog(LOG_INFO, "[-NCP-] BBR Sequence Number: %u (0x%x)", seqno, seqno);
+		//signal_property_changed(kWPANTUNDProperty_ThreadRouterSelecionitter, data);
+	} else if (key == SPINEL_PROP_THREAD_BBR_REGISTER_DELAY) {
+		uint32_t delay = 0;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT32_S, &delay);
+		syslog(LOG_INFO, "[-NCP-] BBR Register Delay: %u (0x%x)", delay, delay);
+		//signal_property_changed(kWPANTUNDProperty_ThreadRouterSelecionitter, data);
+	} else if (key == SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT) {
+		uint32_t timeout = 0;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT32_S, &timeout);
+		syslog(LOG_INFO, "[-NCP-] BBR MLR Timeout: %u (0x%x)", timeout, timeout);
 	}
 
 bail:
