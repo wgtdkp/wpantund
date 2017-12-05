@@ -294,7 +294,10 @@ NCPInstanceBase::get_supported_property_keys(void) const
 	properties.insert(kWPANTUNDProperty_NCPCCAThreshold);
 
 	properties.insert(kWPANTUNDProperty_NCPMACAddress);
-
+	properties.insert(kWPANTUNDProperty_ThreadRouterSelectionJitter);
+	properties.insert(kWPANTUNDProperty_ThreadBBRSequenceNumber);
+	properties.insert(kWPANTUNDProperty_ThreadBBRRegisterDelay);
+	properties.insert(kWPANTUNDProperty_ThreadBBRMLRTimeout);
 
 	properties.insert(kWPANTUNDProperty_ConfigTUNInterfaceName);
 
