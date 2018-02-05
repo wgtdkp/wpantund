@@ -991,7 +991,7 @@ SpinelNCPInstance::property_get_value(
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, SPINEL_DATATYPE_UINT8_S);
 
-	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, SPINEL_DATATYPE_UINT32_S);
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
@@ -2205,7 +2205,7 @@ SpinelNCPInstance::property_set_value(
 			mSettings[kWPANTUNDProperty_ThreadBBRSequenceNumber] = SettingsEntry(command);
 
 			start_new_task(factory.finish());
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
 			uint32_t delay = any_to_int(value);
 			SpinelNCPTaskSendCommand::Factory factory(this);
 			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, delay);
@@ -2216,7 +2216,7 @@ SpinelNCPInstance::property_set_value(
 			factory.set_callback(cb);
 
 			factory.add_command(command);
-			mSettings[kWPANTUNDProperty_ThreadBBRRegisterDelay] = SettingsEntry(command);
+			mSettings[kWPANTUNDProperty_ThreadBBRRegistrationDelay] = SettingsEntry(command);
 			start_new_task(factory.finish());
 		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
 			uint32_t timeout = any_to_int(value);
