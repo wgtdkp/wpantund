@@ -124,7 +124,7 @@
 #define kWPANTUNDProperty_ThreadPendingDatasetAsValMap          "Thread:PendingDataset:AsValMap"
 #define kWPANTUNDProperty_ThreadRouterSelectionJitter           "Thread:RouterSelectionJitter"
 #define kWPANTUNDProperty_ThreadBBRSequenceNumber               "Thread:BBRSequenceNumber"
-#define kWPANTUNDProperty_ThreadBBRRegisterDelay                "Thread:BBRRegisterDelay"
+#define kWPANTUNDProperty_ThreadBBRRegistrationDelay                "Thread:BBRRegistrationDelay"
 #define kWPANTUNDProperty_ThreadBBRMLRTimeout                   "Thread:BBRMLRTimeout"
 
 #define kWPANTUNDProperty_DatasetActiveTimestamp                "Dataset:ActiveTimestamp"
