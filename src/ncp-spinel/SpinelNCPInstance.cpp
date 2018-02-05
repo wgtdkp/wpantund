@@ -1121,7 +1121,7 @@ SpinelNCPInstance::property_get_value(
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, SPINEL_DATATYPE_UINT8_S);
 
-	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, SPINEL_DATATYPE_UINT32_S);
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
@@ -2276,7 +2276,6 @@ SpinelNCPInstance::property_set_value(
 					&addr,
 					64
 				);
-
 			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
 				.set_callback(cb)
 				.add_command(command)
@@ -2634,7 +2633,7 @@ SpinelNCPInstance::property_set_value(
 
 			factory.add_command(command);
 			start_new_task(factory.finish());
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegisterDelay)) {
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
 			uint32_t delay = any_to_int(value);
 			SpinelNCPTaskSendCommand::Factory factory(this);
 			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, delay);
@@ -2658,10 +2657,21 @@ SpinelNCPInstance::property_set_value(
 
 			factory.add_command(command);
 			start_new_task(factory.finish());
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_StreamNet)) {
+		Data packet = any_to_data(value);
+
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_WLEN_S), SPINEL_PROP_STREAM_NET, packet.data(), packet.size());
+
+		syslog(LOG_NOTICE, "StreamNet traffic");
+
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(command)
+				.finish()
+				);
 		} else {
 			NCPInstanceBase::property_set_value(key, value, cb);
 		}
-
 	} catch (const boost::bad_any_cast &x) {
 		// We will get a bad_any_cast exception if the property is of
 		// the wrong type.
