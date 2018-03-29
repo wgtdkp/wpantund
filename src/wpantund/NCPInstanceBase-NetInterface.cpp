@@ -240,9 +240,10 @@ bail:
 void
 NCPInstanceBase::handle_normal_ipv6_from_ncp(const uint8_t* ip_packet, size_t packet_length)
 {
+/*
     uint8_t domainPrefix[8] = {0xfd, 0x00, 0x7d, 0x03, 0x7d, 0x03, 0x7d, 0x03};
     uint8_t dstOffset = 24;
-    syslog(LOG_INFO, "[NCP->] Dst %2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:%2x%2x:",
+    syslog(LOG_INFO, "[NCP->] Dst %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 		    ip_packet[dstOffset], ip_packet[dstOffset+1], ip_packet[dstOffset+2], ip_packet[dstOffset+3],
                     ip_packet[dstOffset+4], ip_packet[dstOffset+5], ip_packet[dstOffset+6], ip_packet[dstOffset+7],
                     ip_packet[dstOffset+8], ip_packet[dstOffset+9], ip_packet[dstOffset+10], ip_packet[dstOffset+11],
@@ -265,6 +266,16 @@ NCPInstanceBase::handle_normal_ipv6_from_ncp(const uint8_t* ip_packet, size_t pa
 		syslog(LOG_INFO, "[NCP->] IPv6 packet to host pump!");
 	}
     }
+*/
+	ssize_t ret = mPrimaryInterface->write(ip_packet, packet_length);
+
+	if (ret != packet_length) {
+		syslog(LOG_INFO, "[NCP->] IPv6 packet refused by host stack! (ret = %ld)", (long)ret);
+	}
+	else
+	{
+		syslog(LOG_INFO, "[NCP->] IPv6 packet to host pump!");
+	}
 }
 
 void
@@ -438,10 +449,16 @@ NCPInstanceBase::should_forward_ncpbound_frame(uint8_t* type, const uint8_t* ip_
 
 	rule.update_from_outbound_packet(ip_packet);
 
-	if (mDropFirewall.match_outbound(ip_packet) != mDropFirewall.end()) {
-		syslog(LOG_INFO, "[->NCP] Dropping matched packet.");
-		should_forward = false;
-		goto bail;
+	{
+		IPv6PacketMatcher::const_iterator iter = mDropFirewall.match_outbound(ip_packet); 
+
+		if (iter != mDropFirewall.end()) {
+            int pos = std::distance(mDropFirewall.begin(), iter);
+			syslog(LOG_INFO, "[->NCP] Dropping matched packet.");
+			syslog(LOG_INFO, "[->NCP] match rule pos - %d : type-%d.", pos, iter->type);
+			should_forward = false;
+			goto bail;
+		}
 	}
 
 	if (mLegacyCommissioningMatcher.count(rule)) {
