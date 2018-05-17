@@ -69,7 +69,11 @@ protected:
 	virtual void add_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
 					bool stable, CallbackWithStatus cb);
 	virtual void remove_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
-					bool stable, CallbackWithStatus cb);
+									bool stable, CallbackWithStatus cb);
+
+	virtual void add_eidcache_on_ncp(const struct in6_addr &address, const uint8_t **iid,
+									uint16_t rloc, CallbackWithStatus cb);
+	virtual void remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb);
 
 public:
 	static bool setup_property_supported_by_class(const std::string& prop_name);

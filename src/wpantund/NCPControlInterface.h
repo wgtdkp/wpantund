@@ -169,6 +169,13 @@ public:
 		CallbackWithStatus cb = NilReturn()
 	) = 0;
 
+	virtual void remove_external_route(
+		const struct in6_addr *prefix,
+		int prefix_len_in_bits,
+		int domain_id,
+		CallbackWithStatus cb = NilReturn()
+	) = 0;
+
 	virtual void joiner_add(
 		const char *psk,
 		uint32_t joiner_timeout,
@@ -176,10 +183,15 @@ public:
 		CallbackWithStatus cb = NilReturn()
 	) = 0;
 
-	virtual void remove_external_route(
-		const struct in6_addr *prefix,
-		int prefix_len_in_bits,
-		int domain_id,
+	virtual void add_eidcache(
+		const struct in6_addr *address,
+		const uint8_t **iid,
+		uint16_t rloc,
+		CallbackWithStatus cb = NilReturn()
+	) = 0;
+
+	virtual void remove_eidcache(
+		const struct in6_addr *address,
 		CallbackWithStatus cb = NilReturn()
 	) = 0;
 

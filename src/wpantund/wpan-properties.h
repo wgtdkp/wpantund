@@ -131,6 +131,8 @@
 #define kWPANTUNDProperty_ThreadBBRSequenceNumber               "Thread:BBRSequenceNumber"
 #define kWPANTUNDProperty_ThreadBBRRegistrationDelay            "Thread:BBRRegistrationDelay"
 #define kWPANTUNDProperty_ThreadBBRMLRTimeout                   "Thread:BBRMLRTimeout"
+#define kWPANTUNDProperty_ThreadArpEidCacheEntries              "Thread:ARP:EidCache:Entries"
+#define kWPANTUNDProperty_ThreadArpEidCacheEntriesAsValMap      "Thread:ARP:EidCache:Entries:AsValMap"
 
 #define kWPANTUNDProperty_DatasetActiveTimestamp                "Dataset:ActiveTimestamp"
 #define kWPANTUNDProperty_DatasetPendingTimestamp               "Dataset:PendingTimestamp"
@@ -288,6 +290,10 @@
 // ----------------------------------------------------------------------------
 
 // Values for value map keys
+
+#define kWPANTUNDValueMapKey_EidCache_Address                   "Address"
+#define kWPANTUNDValueMapKey_EidCache_Iid                       "Iid"
+#define kWPANTUNDValueMapKey_EidCache_Rloc                      "Rloc"
 
 #define kWPANTUNDValueMapKey_Whitelist_ExtAddress               "ExtAddress"
 #define kWPANTUNDValueMapKey_Whitelist_Rssi                     "FixedRssi"

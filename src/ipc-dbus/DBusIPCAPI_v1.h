@@ -91,6 +91,15 @@ private:
 		DBusMessage *        message
 	);
 
+	DBusHandlerResult interface_eidcache_add_handler(
+		NCPControlInterface* interface,
+		DBusMessage *        message
+	);
+
+	DBusHandlerResult interface_eidcache_remove_handler(
+		NCPControlInterface* interface,
+		DBusMessage *        message
+	);
 	DBusHandlerResult interface_reset_handler(
 		NCPControlInterface* interface,
 		DBusMessage *        message

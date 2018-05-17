@@ -42,6 +42,8 @@
 #include "tool-cmd-config-gateway.h"
 #include "tool-cmd-add-route.h"
 #include "tool-cmd-remove-route.h"
+#include "tool-cmd-add-eidcache.h"
+#include "tool-cmd-remove-eidcache.h"
 #include "tool-cmd-peek.h"
 #include "tool-cmd-poke.h"
 #include "tool-cmd-pcap.h"
@@ -105,6 +107,16 @@
 		"remove-route", \
 		"Remove external route prefix", \
 		&tool_cmd_remove_route \
+	}, \
+	{ \
+		"add-eidcache", \
+		"Add eidcache entry", \
+		&tool_cmd_add_eidcache \
+	}, \
+	{ \
+		"remove-eidcache", \
+		"Remove eidcache entry", \
+		&tool_cmd_remove_eidcache \
 	}, \
 	{ \
 		"commissioner", \

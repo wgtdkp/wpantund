@@ -1529,6 +1529,10 @@ spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_THREAD_BBR_MLR_TIMEOUT";
         break;
 
+    case SPINEL_PROP_THREAD_ARP_EIDCACHE:
+        ret = "PROP_THREAD_ARP_EIDCACHE";
+        break;
+
     case SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP:
         ret = "PROP_DATASET_ACTIVE_TIMESTAMP";
         break;

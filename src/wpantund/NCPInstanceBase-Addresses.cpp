@@ -852,6 +852,33 @@ NCPInstanceBase::route_was_removed(Origin origin, const struct in6_addr &route_p
 	}
 }
 
+void
+NCPInstanceBase::eidcache_was_added(Origin origin, const struct in6_addr &address, const uint8_t **iid, uint16_t rloc,
+		CallbackWithStatus cb)
+{
+	syslog(LOG_INFO, "EidCache: Adding %s", in6_addr_to_string(address).c_str());
+	if (origin != kOriginThreadNCP) {
+		add_eidcache_on_ncp(address, iid, rloc,
+				boost::bind(&NCPInstanceBase::check_ncp_entry_update_status, this, _1, "adding eidcache", cb));
+
+	} else{ 
+		cb(kWPANTUNDStatus_Ok);
+	}
+}
+
+void
+NCPInstanceBase::eidcache_was_removed(Origin origin, const struct in6_addr &address, CallbackWithStatus cb)
+{
+	syslog(LOG_INFO, "EidCache: Removing %s", in6_addr_to_string(address).c_str());
+	if (origin != kOriginThreadNCP) {
+		remove_eidcache_on_ncp(address,
+				boost::bind(&NCPInstanceBase::check_ncp_entry_update_status, this, _1, "removing eidcache", cb));
+
+	} else{
+		cb(kWPANTUNDStatus_Ok);
+	}
+}
+
 // Decides if the given route should be added on the primary interface, if we need to add the route `metric` is also
 // updated.
 bool

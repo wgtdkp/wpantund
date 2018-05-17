@@ -287,6 +287,7 @@ SpinelNCPInstance::get_supported_property_keys()const
 	properties.insert(kWPANTUNDProperty_NCPRSSI);
 	properties.insert(kWPANTUNDProperty_NCPExtendedAddress);
 	properties.insert(kWPANTUNDProperty_NCPCCAFailureRate);
+	properties.insert(kWPANTUNDProperty_ThreadArpEidCacheEntries);
 
 	if (mCapabilities.count(SPINEL_CAP_ROLE_SLEEPY)) {
 		properties.insert(kWPANTUNDProperty_NCPSleepyPollInterval);
@@ -529,6 +530,74 @@ unpack_mac_whitelist_entries(const uint8_t *data_in, spinel_size_t data_len, boo
 }
 
 static int
+unpack_arp_eidcache_entries(const uint8_t *data_in, spinel_size_t data_len, boost::any& value, bool as_val_map)
+{
+	spinel_ssize_t len;
+	ValueMap entry;
+	std::list<ValueMap> result_as_val_map;
+	std::list<std::string> result_as_string;
+	const spinel_ipv6addr_t *addr= NULL;
+	const spinel_eui64_t *iid = NULL;
+	uint16_t rloc;
+
+	int ret = kWPANTUNDStatus_Ok;
+
+	while (data_len > 0)
+	{
+		len = spinel_datatype_unpack(
+			data_in,
+			data_len,
+			SPINEL_DATATYPE_STRUCT_S(
+				SPINEL_DATATYPE_IPv6ADDR_S
+				SPINEL_DATATYPE_EUI64_S     // Mesh Local IID
+				SPINEL_DATATYPE_UINT16_S    // Rloc
+			),
+			&addr,
+			&iid,
+			&rloc
+		);
+
+		if (len <= 0)
+		{
+			ret = kWPANTUNDStatus_Failure;
+			break;
+		}
+
+		if (as_val_map) {
+			entry.clear();
+			entry[kWPANTUNDValueMapKey_EidCache_Address] = Data(addr->bytes, sizeof(spinel_ipv6addr_t));
+			entry[kWPANTUNDValueMapKey_EidCache_Iid] = Data(iid->bytes, sizeof(spinel_eui64_t));
+			entry[kWPANTUNDValueMapKey_EidCache_Rloc] = rloc;
+			result_as_val_map.push_back(entry);
+		} else {
+			char c_string[500];
+			int index;
+
+			index = snprintf(c_string, sizeof(c_string), "%-48s %02X%02X%02X%02X%02X%02X%02X%02X  %04X",
+							in6_addr_to_string(*reinterpret_cast<const struct in6_addr *>(addr)).c_str(),
+							iid->bytes[0], iid->bytes[1], iid->bytes[2], iid->bytes[3],
+						 	iid->bytes[4], iid->bytes[5], iid->bytes[6], iid->bytes[7], rloc);
+
+			result_as_string.push_back(std::string(c_string));
+		}
+
+		data_len -= len;
+		data_in += len;
+	}
+
+	if (ret == kWPANTUNDStatus_Ok) {
+
+		if (as_val_map) {
+			value = result_as_val_map;
+		} else {
+			value = result_as_string;
+		}
+	}
+
+	return ret;
+}
+
+static int
 unpack_mac_blacklist_entries(const uint8_t *data_in, spinel_size_t data_len, boost::any& value, bool as_val_map)
 {
 	spinel_ssize_t len;
@@ -566,8 +635,8 @@ unpack_mac_blacklist_entries(const uint8_t *data_in, spinel_size_t data_len, boo
 			int index;
 
 			index = snprintf(c_string, sizeof(c_string), "%02X%02X%02X%02X%02X%02X%02X%02X",
-							 eui64->bytes[0], eui64->bytes[1], eui64->bytes[2], eui64->bytes[3],
-							 eui64->bytes[4], eui64->bytes[5], eui64->bytes[6], eui64->bytes[7]);
+							eui64->bytes[0], eui64->bytes[1], eui64->bytes[2], eui64->bytes[3],
+							eui64->bytes[4], eui64->bytes[5], eui64->bytes[6], eui64->bytes[7]);
 
 			result_as_string.push_back(std::string(c_string));
 		}
@@ -1241,6 +1310,24 @@ SpinelNCPInstance::property_get_value(
 			SIMPLE_SPINEL_GET(SPINEL_PROP_MAC_WHITELIST_ENABLED, SPINEL_DATATYPE_BOOL_S);
 		}
 
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadArpEidCacheEntries)) {
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(
+					SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_THREAD_ARP_EIDCACHE)
+				)
+				.set_reply_unpacker(boost::bind(unpack_arp_eidcache_entries, _1, _2, _3, false))
+				.finish()
+			);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadArpEidCacheEntriesAsValMap)) {
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(
+					SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_THREAD_ARP_EIDCACHE)
+				)
+				.set_reply_unpacker(boost::bind(unpack_arp_eidcache_entries, _1, _2, _3, true))
+				.finish()
+			);
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_MACWhitelistEntries)) {
 		if (!mCapabilities.count(SPINEL_CAP_MAC_WHITELIST)) {
 			cb(kWPANTUNDStatus_FeatureNotSupported, boost::any(std::string("MAC whitelist feature not supported by NCP")));
@@ -2818,6 +2905,25 @@ SpinelNCPInstance::property_remove_value(
 					cb(kWPANTUNDStatus_InvalidArgument);
 				}
 			}
+
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadArpEidCacheEntries)) {
+			Data address = any_to_data(value);
+
+			if (address.size() == sizeof(spinel_ipv6addr_t)) {
+				start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+						.set_callback(cb)
+						.add_command(
+							SpinelPackData(
+								SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(SPINEL_DATATYPE_IPv6ADDR_S),
+								SPINEL_PROP_THREAD_ARP_EIDCACHE,
+								address.data()
+								)
+							)
+						.finish()
+						);
+			} else {
+				cb(kWPANTUNDStatus_InvalidArgument);
+			}
 		} else {
 			NCPInstanceBase::property_remove_value(key, value, cb);
 		}
@@ -4162,6 +4268,54 @@ SpinelNCPInstance::remove_route_on_ncp(const struct in6_addr &route, uint8_t pre
 		prefix_len,
 		stable,
 		convert_route_preference_to_flags(preference)
+	));
+
+	start_new_task(factory.finish());
+}
+
+void
+SpinelNCPInstance::add_eidcache_on_ncp(const struct in6_addr &address, const uint8_t **iid, uint16_t rloc,
+		CallbackWithStatus cb)
+{
+	Data iid_data = Data(*iid, 8);
+	SpinelNCPTaskSendCommand::Factory factory(this);
+
+	syslog(LOG_NOTICE, "Adding eidcache %s iid %02x%02X%02x%02X%02x%02X%02x%02x rloc %04x to NCP",
+			in6_addr_to_string(address).c_str(),
+			(*iid)[0], (*iid)[1], (*iid)[2], (*iid)[3], (*iid)[4], (*iid)[5], (*iid)[6], (*iid)[7], rloc);
+
+	factory.set_callback(cb);
+
+	factory.add_command(SpinelPackData(
+		SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+			SPINEL_DATATYPE_IPv6ADDR_S
+			SPINEL_DATATYPE_EUI64_S
+			SPINEL_DATATYPE_UINT16_S
+		),
+		SPINEL_PROP_THREAD_ARP_EIDCACHE,
+		&address,
+		iid_data.data(),
+		rloc
+		));
+
+	start_new_task(factory.finish());
+}
+
+void
+SpinelNCPInstance::remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb)
+{
+	SpinelNCPTaskSendCommand::Factory factory(this);
+
+	syslog(LOG_NOTICE, "Removing eidcache %s from NCP", in6_addr_to_string(address).c_str());
+
+	factory.set_callback(cb);
+
+	factory.add_command(SpinelPackData(
+		SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+			SPINEL_DATATYPE_IPv6ADDR_S
+		),
+		SPINEL_PROP_THREAD_ARP_EIDCACHE,
+		&address
 	));
 
 	start_new_task(factory.finish());

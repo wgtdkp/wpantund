@@ -164,7 +164,12 @@ protected:
 	virtual void add_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
 					bool stable, CallbackWithStatus cb);
 	virtual void remove_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
-					bool stable, CallbackWithStatus cb);
+									bool stable, CallbackWithStatus cb);
+
+	virtual void add_eidcache_on_ncp(const struct in6_addr &address, const uint8_t **iid,
+			uint16_t rloc, CallbackWithStatus cb);
+
+	virtual void remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb);
 
 	static RoutePreference convert_flags_to_route_preference(uint8_t flags);
 	static uint8_t convert_route_preference_to_flags(RoutePreference priority);

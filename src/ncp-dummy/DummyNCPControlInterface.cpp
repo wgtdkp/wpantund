@@ -173,6 +173,24 @@ DummyNCPControlInterface::remove_external_route(
 }
 
 void
+DummyNCPControlInterface::add_eidcache(
+	const struct in6_addr *address,
+	const uint8_t **iid,
+	uint16_t rloc,
+	CallbackWithStatus cb
+) {
+	cb(kWPANTUNDStatus_FeatureNotImplemented);
+}
+
+void
+DummyNCPControlInterface::remove_eidcache(
+	const struct in6_addr *address,
+	CallbackWithStatus cb
+) {
+	cb(kWPANTUNDStatus_FeatureNotImplemented);
+}
+
+void
 DummyNCPControlInterface::joiner_add(
 	const char *psk,
 	uint32_t joiner_timeout,

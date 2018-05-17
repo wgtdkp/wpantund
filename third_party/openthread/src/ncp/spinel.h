@@ -1403,6 +1403,8 @@ typedef enum
     SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT
                                         = SPINEL_PROP_THREAD_EXT__BEGIN + 42,
 
+    SPINEL_PROP_THREAD_ARP_EIDCACHE
+                                        = SPINEL_PROP_THREAD_EXT__BEGIN + 43,
     SPINEL_PROP_THREAD_EXT__END         = 0x1600,
 
     SPINEL_PROP_IPV6__BEGIN             = 0x60,
