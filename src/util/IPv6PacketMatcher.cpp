@@ -433,6 +433,7 @@ IPv6PacketMatcher::match_outbound(const uint8_t* packet) const
 	iterator iter;
 	for(iter = begin(); iter != end(); ++iter) {
 		if(iter->match_outbound(packet)) {
+			syslog(LOG_INFO, "[->NCP] match rule pos - %d : type - %d.", std::distance(begin(), iter), iter->type);
 			break;
 		}
 	}
