@@ -158,6 +158,7 @@ DummyNCPControlInterface::add_external_route(
 	int prefix_len_in_bits,
 	int domain_id,
 	ExternalRoutePriority priority,
+	bool stable,
 	CallbackWithStatus cb
 ) {
 	cb(kWPANTUNDStatus_FeatureNotImplemented);
