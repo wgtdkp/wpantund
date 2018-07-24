@@ -2448,6 +2448,17 @@ SpinelNCPInstance::property_set_value(
 			} else {
 				cb(kWPANTUNDStatus_InvalidArgument);
 			}
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadAddressErrorNotification)) {
+			Data packet = any_to_data(value);
+
+			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_S),
+					SPINEL_PROP_THREAD_ADDRESS_ERROR_NOTIFICATION, packet.data(), packet.size());
+
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+					.set_callback(cb)
+					.add_command(command)
+					.finish()
+					);
 
 		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ChannelManagerNewChannel)) {
 			uint8_t channel = any_to_int(value);

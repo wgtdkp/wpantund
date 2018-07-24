@@ -1405,6 +1405,10 @@ typedef enum
 
     SPINEL_PROP_THREAD_ARP_EIDCACHE
                                         = SPINEL_PROP_THREAD_EXT__BEGIN + 43,
+					
+    SPINEL_PROP_THREAD_ADDRESS_ERROR_NOTIFICATION
+	   				= SPINEL_PROP_THREAD_EXT__BEGIN + 44,
+
     SPINEL_PROP_THREAD_EXT__END         = 0x1600,
 
     SPINEL_PROP_IPV6__BEGIN             = 0x60,

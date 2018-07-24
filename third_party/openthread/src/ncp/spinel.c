@@ -1481,6 +1481,10 @@ spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_THREAD_TMF_PROXY_STREAM";
         break;
 
+    case SPINEL_PROP_THREAD_ADDRESS_ERROR_NOTIFICATION:
+	ret = "PROP_THREAD_ADDRESS_ERROR_NOTIFICATION";
+	break;
+
     case SPINEL_PROP_THREAD_DISCOVERY_SCAN_JOINER_FLAG:
         ret = "PROP_THREAD_DISCOVERY_SCAN_JOINER_FLAG";
         break;
