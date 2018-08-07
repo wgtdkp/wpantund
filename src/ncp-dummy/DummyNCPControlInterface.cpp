@@ -174,6 +174,22 @@ DummyNCPControlInterface::remove_external_route(
 }
 
 void
+DummyNCPControlInterface::joiner_attach(
+	CallbackWithStatus cb
+) {
+	cb(kWPANTUNDStatus_FeatureNotImplemented);
+}
+
+void 
+DummyNCPControlInterface::joiner_commissioning(
+	bool action,
+	const char *psk,
+	const char *provisioning_url,
+) {
+	cb(kWPANTUNDStatus_FeatureNotImplemented);
+}
+
+void
 DummyNCPControlInterface::add_eidcache(
 	const struct in6_addr *address,
 	const uint8_t **iid,

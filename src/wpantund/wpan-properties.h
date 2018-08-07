@@ -235,6 +235,7 @@
 #define kWPANTUNDCommissionerState_Active                       "active"
 
 #define kWPANTUNDProperty_ThreadAddressErrorNotification        "Thread:AddressErrorNotification"
+#define kWPANTUNDProperty_ThreadJoinerState                     "Thread:Joiner:State"
 
 #define kWPANTUNDProperty_NestLabs_NetworkAllowingJoin          "com.nestlabs.internal:Network:AllowingJoin"
 #define kWPANTUNDProperty_NestLabs_NetworkPassthruPort          "com.nestlabs.internal:Network:PassthruPort"

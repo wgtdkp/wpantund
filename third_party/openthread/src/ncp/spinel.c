@@ -1597,6 +1597,14 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_DATASET_DEST_ADDRESS";
         break;
 
+    case SPINEL_PROP_MESHCOP_JOINER_STATE:
+        ret = "PROP_MESHCOP_JOINER_STATE";
+        break;
+
+    case SPINEL_PROP_MESHCOP_JOINER_COMMISSIONING:
+        ret = "PROP_MESHCOP_JOINER_COMMISSIONING";
+        break;
+
     case SPINEL_PROP_IPV6_LL_ADDR:
         ret = "PROP_IPV6_LL_ADDR";
         break;
@@ -2145,6 +2153,14 @@ const char *spinel_status_to_cstr(spinel_status_t status)
         ret = "STATUS_JOIN_INCOMPATIBLE";
         break;
 
+    case SPINEL_STATUS_JOIN_RSP_TIMEOUT:
+        ret = "STATUS_JOIN_RSP_TIMEOUT";
+        break;
+
+    case SPINEL_STATUS_JOIN_SUCCESS:
+        ret = "STATUS_JOIN_SUCCESS";
+        break;
+
     case SPINEL_STATUS_RESET_POWER_ON:
         ret = "STATUS_RESET_POWER_ON";
         break;
@@ -2348,6 +2364,10 @@ const char *spinel_capability_to_cstr(unsigned int capability)
 
     case SPINEL_CAP_THREAD_UDP_PROXY:
         ret = "CAP_THREAD_UDP_PROXY";
+        break;
+
+    case SPINEL_CAP_THREAD_JOINER:
+        ret = "CAP_THREAD_JOINER";
         break;
 
     case SPINEL_CAP_NEST_LEGACY_INTERFACE:

@@ -51,6 +51,7 @@
 #include "tool-cmd-pcap.h"
 #include "tool-cmd-commr.h"
 #include "tool-cmd-commissioner.h"
+#include "tool-cmd-joiner.h"
 #include "tool-cmd-dataset.h"
 
 #include "wpanctl-utils.h"
@@ -130,6 +131,11 @@
 		"remove-eidcache", \
 		"Remove eidcache entry", \
 		&tool_cmd_remove_eidcache \
+	}, \
+	{ \
+		"joiner", \
+		"Joiner commands", \
+		&tool_cmd_joiner \
 	}, \
 	{ \
 		"commissioner", \
