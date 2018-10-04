@@ -141,6 +141,17 @@
 #define kWPANTUNDProperty_ThreadArpEidCacheEntries              "Thread:ARP:EidCache:Entries"
 #define kWPANTUNDProperty_ThreadArpEidCacheEntriesAsValMap      "Thread:ARP:EidCache:Entries:AsValMap"
 
+#define kWPANTUNDProperty_ThreadDomainName                      "Thread:Domain:Name"
+#define kWPANTUNDProperty_ThreadDomainPrefix                    "Thread:Domain:Prefix"
+
+#define kWPANTUNDProperty_ThreadPrimaryBbr                      "Thread:Bbr:Primary"
+#define kWPANTUNDProperty_ThreadLocalBbr                        "Thread:Bbr:Local"
+
+#define kWPANTUNDProperty_BbrSequenceNumber                     "Bbr:SequenceNumber"
+#define kWPANTUNDProperty_BbrReregistrationDelay                "Bbr:ReregistrationDelay"
+#define kWPANTUNDProperty_BbrMlrTimeout                         "Bbr:MlrTimeout"
+#define kWPANTUNDProperty_BbrServer                             "Bbr:Server"
+
 #define kWPANTUNDProperty_DatasetActiveTimestamp                "Dataset:ActiveTimestamp"
 #define kWPANTUNDProperty_DatasetPendingTimestamp               "Dataset:PendingTimestamp"
 #define kWPANTUNDProperty_DatasetMasterKey                      "Dataset:MasterKey"

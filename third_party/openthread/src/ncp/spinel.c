@@ -1051,6 +1051,115 @@ spinel_ssize_t spinel_datatype_vpack(uint8_t *     data_ptr,
 
 // **** LCOV_EXCL_START ****
 
+const char *spinel_command_to_cstr(unsigned int command)
+{
+    const char *ret = "UNKNOWN";
+
+    switch (command)
+    {
+    case SPINEL_CMD_NOOP:
+        ret = "NOOP";
+        break;
+
+    case SPINEL_CMD_RESET:
+        ret = "RESET";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_GET:
+        ret = "PROP_VALUE_GET";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_SET:
+        ret = "PROP_VALUE_SET";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_INSERT:
+        ret = "PROP_VALUE_INSERT";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_REMOVE:
+        ret = "PROP_VALUE_REMOVE";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_IS:
+        ret = "PROP_VALUE_IS";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_INSERTED:
+        ret = "PROP_VALUE_INSERTED";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_REMOVED:
+        ret = "PROP_VALUE_REMOVED";
+        break;
+
+    case SPINEL_CMD_NET_SAVE:
+        ret = "NET_SAVE";
+        break;
+
+    case SPINEL_CMD_NET_CLEAR:
+        ret = "NET_CLEAR";
+        break;
+
+    case SPINEL_CMD_NET_RECALL:
+        ret = "NET_RECALL";
+        break;
+
+    case SPINEL_CMD_HBO_OFFLOAD:
+        ret = "HBO_OFFLOAD";
+        break;
+
+    case SPINEL_CMD_HBO_RECLAIM:
+        ret = "HBO_RECLAIM";
+        break;
+
+    case SPINEL_CMD_HBO_DROP:
+        ret = "HBO_DROP";
+        break;
+
+    case SPINEL_CMD_HBO_OFFLOADED:
+        ret = "HBO_OFFLOADED";
+        break;
+
+    case SPINEL_CMD_HBO_RECLAIMED:
+        ret = "HBO_RECLAIMED";
+        break;
+
+    case SPINEL_CMD_HBO_DROPPED:
+        ret = "HBO_DROPPED";
+        break;
+
+    case SPINEL_CMD_PEEK:
+        ret = "PEEK";
+        break;
+
+    case SPINEL_CMD_PEEK_RET:
+        ret = "PEEK_RET";
+        break;
+
+    case SPINEL_CMD_POKE:
+        ret = "POKE";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_MULTI_GET:
+        ret = "PROP_VALUE_MULTI_GET";
+        break;
+
+    case SPINEL_CMD_PROP_VALUE_MULTI_SET:
+        ret = "PROP_VALUE_MULTI_SET";
+        break;
+
+    case SPINEL_CMD_PROP_VALUES_ARE:
+        ret = "PROP_VALUES_ARE";
+        break;
+
+    default:
+        break;
+    }
+
+    return ret;
+}
+
 const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
 {
     const char *ret = "UNKNOWN";
@@ -1597,6 +1706,37 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "PROP_DATASET_DEST_ADDRESS";
         break;
 
+    case SPINEL_PROP_THREAD_DOMAIN_NAME:
+        ret = "PROP_THREAD_DOMAIN_NAME";
+        break;
+
+    case SPINEL_PROP_THREAD_DOMAIN_PREFIX:
+        ret = "PROP_THREAD_DOMAIN_PREFIX";
+        break;
+
+    case SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET:
+        ret = "PROP_THREAD_PRIMARY_BBR_DATASET";
+        break;
+
+    case SPINEL_PROP_THREAD_LOCAL_BBR_DATASET:
+        ret = "PROP_THREAD_LOCAL_BBR_DATASET";
+        break;
+
+    case SPINEL_PROP_BBR_DATASET_SEQUENCE_NUMBER:
+        ret = "PROP_BBR_DATASET_SEQUENCE_NUMBER";
+        break;
+
+    case SPINEL_PROP_BBR_DATASET_REREGISTRATION_DELAY:
+        ret = "PROP_BBR_DATASET_REREGISTRATION_DELAY";
+        break;
+
+    case SPINEL_PROP_BBR_DATASET_MLR_TIMEOUT:
+        ret = "PROP_BBR_DATASET_MLR_TIMEOUT";
+        break;
+
+    case SPINEL_PROP_BBR_DATASET_SERVER16:
+        ret = "PROP_BBR_DATASET_SERVER16";
+        break;
     case SPINEL_PROP_MESHCOP_JOINER_STATE:
         ret = "PROP_MESHCOP_JOINER_STATE";
         break;

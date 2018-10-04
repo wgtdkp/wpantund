@@ -328,6 +328,7 @@ SpinelNCPInstance::ncp_to_driver_pump()
 				break;
 			}
 
+			log_spinel_frame(kNCPToDriver, mInboundFrame, mInboundFrameSize);
 			handle_ncp_spinel_callback(command_value, mInboundFrame, mInboundFrameSize);
 		}
 	} // while (!ncp_state_is_detached_from_ncp(get_ncp_state()))
@@ -387,6 +388,7 @@ SpinelNCPInstance::driver_to_ncp_pump()
 		// Get packet or management command, and also
 		// perform any necessary filtering.
 		if (mOutboundBufferLen > 0) {
+			log_spinel_frame(kDriverToNCP, mOutboundBuffer, mOutboundBufferLen);
 			if (mOutboundBuffer[1] == SPINEL_CMD_PROP_VALUE_GET) {
 				spinel_prop_key_t key;
 				spinel_datatype_unpack(mOutboundBuffer, mOutboundBufferLen, "Cii", NULL, NULL, &key);

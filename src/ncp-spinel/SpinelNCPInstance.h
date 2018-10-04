@@ -175,6 +175,14 @@ protected:
 			uint16_t rloc, CallbackWithStatus cb);
 
 	virtual void remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb);
+private:
+
+	enum SpinelFrameOrigin {
+		kDriverToNCP,
+		kNCPToDriver,
+	};
+
+	void log_spinel_frame(SpinelFrameOrigin origin, const uint8_t *frame_ptr, spinel_size_t frame_len);
 
 	static RoutePreference convert_flags_to_route_preference(uint8_t flags);
 	static uint8_t convert_route_preference_to_flags(RoutePreference priority);
@@ -280,6 +288,7 @@ private:
 	uint8_t mSteeringDataAddress[8];
 
 	ThreadDataset mLocalDataset;
+	ThreadBbrDataset mBbrDataset;
 
 	SettingsMap mSettings;
 	SettingsMap::iterator mSettingsIter;

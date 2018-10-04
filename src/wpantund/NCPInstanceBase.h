@@ -552,6 +552,7 @@ protected:
 
 	//! This is set to the manufacturer-assigned permanent EUI64 address.
 	uint8_t mMACHardwareAddress[8];
+	std::string mDomainName;
 	union {
 		uint8_t mNCPV6Prefix[8];
 		struct in6_addr mNCPMeshLocalAddress;

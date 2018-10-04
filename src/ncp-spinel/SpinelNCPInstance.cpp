@@ -45,6 +45,7 @@
 #define kWPANTUNDProperty_Spinel_CounterPrefix		"NCP:Counter:"
 
 #define kWPANTUND_Whitelist_RssiOverrideDisabled    127
+#define kWPANTUND_SpinelPropValueDumpLen            8
 
 using namespace nl;
 using namespace wpantund;
@@ -471,6 +472,12 @@ SpinelNCPInstance::get_supported_property_keys()const
 		properties.insert(kWPANTUNDProperty_ThreadActiveDataset);
 		properties.insert(kWPANTUNDProperty_ThreadPendingDataset);
 		properties.insert(kWPANTUNDProperty_ThreadAddressCacheTable);
+
+		//TODO-BH: to introduce SPINEL_CAP_NET_THREAD_1_2
+		properties.insert(kWPANTUNDProperty_ThreadDomainName);
+		// properties.insert(kWPANTUNDProperty_ThreadDomainPrefix);
+		properties.insert(kWPANTUNDProperty_ThreadPrimaryBbr);
+		properties.insert(kWPANTUNDProperty_ThreadLocalBbr);
 
 		if (mCapabilities.count(SPINEL_CAP_ERROR_RATE_TRACKING)) {
 			properties.insert(kWPANTUNDProperty_ThreadNeighborTableErrorRates);
@@ -1335,6 +1342,28 @@ bail:
 }
 
 static int
+unpack_bbr_dataset(const uint8_t *data_in, spinel_size_t data_len, boost::any &value, bool as_val_map)
+{
+	int ret = kWPANTUNDStatus_Ok;
+	ThreadBbrDataset dataset;
+	ValueMap map;
+	std::list<std::string> list;
+
+	ret = dataset.set_from_spinel_frame(data_in, data_len);
+	require_noerr(ret, bail);
+
+	if (as_val_map) {
+		dataset.convert_to_valuemap(map);
+		value = map;
+	} else {
+		dataset.convert_to_string_list(list);
+		value = list;
+	}
+
+bail:
+	return ret;
+}
+static int
 unpack_thread_network_time(const uint8_t *data_in, spinel_size_t data_len, boost::any& value, bool as_val_map)
 {
 	spinel_ssize_t len;
@@ -1417,6 +1446,7 @@ SpinelNCPInstance::perform_dataset_command(const std::string &command, CallbackW
 			.set_reply_unpacker(boost::bind(&SpinelNCPInstance::unpack_and_set_local_dataset, this, _1, _2))
 			.finish()
 		);
+
 
 	} else if (strcaseequal(command.c_str(), kWPANTUNDDatasetCommand_SetActive)) {
 		Data frame;
@@ -1749,6 +1779,26 @@ SpinelNCPInstance::property_get_value(
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadConfigFilterRLOCAddresses)) {
 		cb(kWPANTUNDStatus_Ok, boost::any(mFilterRLOCAddresses));
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadPrimaryBbr)) {
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+			.set_callback(cb)
+			.add_command(
+				SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET)
+			)
+			.set_reply_unpacker(boost::bind(unpack_bbr_dataset, _1, _2, _3, false))
+			.finish()
+		);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadLocalBbr)) {
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+			.set_callback(cb)
+			.add_command(
+				SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_THREAD_LOCAL_BBR_DATASET)
+			)
+			.set_reply_unpacker(boost::bind(unpack_bbr_dataset, _1, _2, _3, false))
+			.finish()
+		);
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadActiveDataset)) {
 		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
@@ -2297,6 +2347,9 @@ SpinelNCPInstance::property_get_value(
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_OpenThreadLogLevel)) {
 		SIMPLE_SPINEL_GET(SPINEL_PROP_DEBUG_NCP_LOG_LEVEL, SPINEL_DATATYPE_UINT8_S);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadDomainName)) {
+		SIMPLE_SPINEL_GET(SPINEL_PROP_THREAD_DOMAIN_NAME, SPINEL_DATATYPE_UTF8_S);
 
 	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_OpenThreadSteeringDataSetWhenJoinable)) {
 		cb(0, boost::any(mSetSteeringDataWhenJoinable));
@@ -3121,6 +3174,32 @@ SpinelNCPInstance::property_set_value(
 				.finish()
 			);
 
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadDomainName))
+		{
+			std::string str = any_to_string(value);
+
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UTF8_S),
+						SPINEL_PROP_THREAD_DOMAIN_NAME,
+						str.c_str()
+						))
+				.finish()
+			);
+
+		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadRouterDowngradeThreshold)) {
+			uint8_t threshold = static_cast<uint8_t>(any_to_int(value));
+
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(SpinelPackData(
+					SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S),
+					SPINEL_PROP_THREAD_ROUTER_DOWNGRADE_THRESHOLD,
+					threshold
+				))
+				.finish()
+			);
+
 		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_CommissionerState)) {
 			if (!mCapabilities.count(SPINEL_CAP_THREAD_COMMISSIONER)) {
 				cb(kWPANTUNDStatus_FeatureNotSupported);
@@ -3572,103 +3651,174 @@ SpinelNCPInstance::property_set_value(
 		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_DatasetCommand)) {
 			perform_dataset_command(any_to_string(value), cb);
 
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_DaemonTickleOnHostDidWake)) {
-			mTickleOnHostDidWake =  any_to_bool(value);
-			syslog(LOG_INFO, "TickleOnHostDidWake is %sabled", mTickleOnHostDidWake ? "en" : "dis");
-			cb(kWPANTUNDStatus_Ok);
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadRouterSelectionJitter)) {
-			uint8_t jitter = static_cast<uint8_t>(any_to_int(value));
-			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, jitter);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_BbrSequenceNumber)) {
 
-			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+		mBbrDataset.mSequenceNumber.set(static_cast<uint8_t>(any_to_int(value)));
+		cb(kWPANTUNDStatus_Ok);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_BbrReregistrationDelay)) {
+
+		mBbrDataset.mReregistrationDelay.set(static_cast<uint32_t>(any_to_int(value)));
+		cb(kWPANTUNDStatus_Ok);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_BbrMlrTimeout)) {
+
+		mBbrDataset.mMlrTimeout.set(static_cast<uint32_t>(any_to_int(value)));
+		cb(kWPANTUNDStatus_Ok);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadLocalBbr)) {
+
+		bool onoff = any_to_bool(value);
+		if (onoff)
+		{
+			Data frame;
+			mBbrDataset.convert_to_spinel_frame(frame);
+
+			SpinelNCPTaskSendCommand::Factory factory(this);
+
+			syslog(LOG_NOTICE, "Configuring bbr dataset to NCP");
+
+			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+			factory.set_callback(cb);
+			factory.add_command(SpinelPackData(
+						SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_S),
+						SPINEL_PROP_THREAD_LOCAL_BBR_DATASET,
+						frame.data(),
+						frame.size()
+						));
+			start_new_task(factory.finish());
+		}
+		else
+		{
+			// clear after set to avoid impact on subsequent set (avoid 'erase' op explicitly)
+			mBbrDataset.clear();
+			cb(kWPANTUNDStatus_Ok);
+		}
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadDomainPrefix)) {
+		Data packet = any_to_data(value);
+
+		if (packet.size() >= sizeof(uint8_t) * 2 + sizeof(in6_addr)) {
+		in6_addr prefix;
+		uint8_t prefixLen;
+		uint8_t flags;
+		uint8_t offset = 0;
+		memcpy(prefix.s6_addr, &packet[offset], sizeof(in6_addr));
+		offset += sizeof(in6_addr);
+		prefixLen = packet[offset++];
+		flags = packet[offset];
+
+		SpinelNCPTaskSendCommand::Factory factory(this);
+
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
+
+		factory.add_command(SpinelPackData(
+			SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(
+				SPINEL_DATATYPE_IPv6ADDR_S // Prefix
+				SPINEL_DATATYPE_UINT8_S    // Prefix length
+				SPINEL_DATATYPE_UINT8_S    // Prefix flags
+			),
+			SPINEL_PROP_THREAD_DOMAIN_PREFIX,
+			&prefix,
+			prefixLen,
+			flags
+			));
+
+		start_new_task(factory.finish());
+		}
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_DaemonTickleOnHostDidWake)) {
+		mTickleOnHostDidWake =  any_to_bool(value);
+		syslog(LOG_INFO, "TickleOnHostDidWake is %sabled", mTickleOnHostDidWake ? "en" : "dis");
+		cb(kWPANTUNDStatus_Ok);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadRouterSelectionJitter)) {
+		uint8_t jitter = static_cast<uint8_t>(any_to_int(value));
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, jitter);
+
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
 				.set_callback(cb)
 				.add_command(command)
 				.finish()
-			);
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
-			uint8_t seqno = any_to_int(value);
-			SpinelNCPTaskSendCommand::Factory factory(this);
-			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, seqno);
+				);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRSequenceNumber)) {
+		uint8_t seqno = any_to_int(value);
+		SpinelNCPTaskSendCommand::Factory factory(this);
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S), SPINEL_PROP_THREAD_BBR_SEQUENCE_NUMBER, seqno);
 
-			syslog(LOG_NOTICE, "Updating local bbr sequence number");
+		syslog(LOG_NOTICE, "Updating local bbr sequence number");
 
-			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
-			factory.set_callback(cb);
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
 
-			factory.add_command(command);
-			start_new_task(factory.finish());
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
-			uint32_t delay = any_to_int(value);
-			SpinelNCPTaskSendCommand::Factory factory(this);
-			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, delay);
+		factory.add_command(command);
+		start_new_task(factory.finish());
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRRegistrationDelay)) {
+		uint32_t delay = any_to_int(value);
+		SpinelNCPTaskSendCommand::Factory factory(this);
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_REGISTER_DELAY, delay);
 
-			syslog(LOG_NOTICE, "Updating local bbr register delay");
+		syslog(LOG_NOTICE, "Updating local bbr register delay");
 
-			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
-			factory.set_callback(cb);
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
 
-			factory.add_command(command);
-			start_new_task(factory.finish());
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
-			uint32_t timeout = any_to_int(value);
-			SpinelNCPTaskSendCommand::Factory factory(this);
-			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT, timeout);
+		factory.add_command(command);
+		start_new_task(factory.finish());
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_ThreadBBRMLRTimeout)) {
+		uint32_t timeout = any_to_int(value);
+		SpinelNCPTaskSendCommand::Factory factory(this);
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT32_S), SPINEL_PROP_THREAD_BBR_MLR_TIMEOUT, timeout);
 
-			syslog(LOG_NOTICE, "Updating local bbr mlr timeout");
+		syslog(LOG_NOTICE, "Updating local bbr mlr timeout");
 
-			factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
-			factory.set_callback(cb);
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
 
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_TimeSync_Period)) {
-			uint16_t sync_period = any_to_int(value);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_TimeSync_Period)) {
+		uint16_t sync_period = any_to_int(value);
 
-			if (!mCapabilities.count(SPINEL_CAP_TIME_SYNC)) {
-				cb(kWPANTUNDStatus_FeatureNotSupported);
-			} else {
-				start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+		if (!mCapabilities.count(SPINEL_CAP_TIME_SYNC)) {
+			cb(kWPANTUNDStatus_FeatureNotSupported);
+		} else {
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
 					.set_callback(cb)
 					.add_command(
 						SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT16_S), SPINEL_PROP_TIME_SYNC_PERIOD, sync_period)
-					)
+						)
 					.finish()
-				);
-			}
+					);
+		}
 
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_TimeSync_Xtal_Threshold)) {
-			uint16_t xtal_threshold = any_to_int(value);
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_TimeSync_Xtal_Threshold)) {
+		uint16_t xtal_threshold = any_to_int(value);
 
-			if (!mCapabilities.count(SPINEL_CAP_TIME_SYNC)) {
-				cb(kWPANTUNDStatus_FeatureNotSupported);
-			} else {
-				start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+		if (!mCapabilities.count(SPINEL_CAP_TIME_SYNC)) {
+			cb(kWPANTUNDStatus_FeatureNotSupported);
+		} else {
+			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
 					.set_callback(cb)
 					.add_command(
 						SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT16_S), SPINEL_PROP_TIME_SYNC_XTAL_THRESHOLD, xtal_threshold)
-					)
-					.finish()
-				);
-			}
-
-		} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_StreamNet)) {
-			Data packet = any_to_data(value);
-
-			Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_WLEN_S), SPINEL_PROP_STREAM_NET, packet.data(), packet.size());
-
-			syslog(LOG_NOTICE, "StreamNet traffic");
-
-			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-					.set_callback(cb)
-					.add_command(command)
+						)
 					.finish()
 					);
-		} else {
-			NCPInstanceBase::property_set_value(key, value, cb);
 		}
-	} catch (const boost::bad_any_cast &x) {
-		// We will get a bad_any_cast exception if the property is of
-		// the wrong type.
-		syslog(LOG_ERR,"property_set_value: Bad type for property \"%s\" (%s)", key.c_str(), x.what());
-		cb(kWPANTUNDStatus_InvalidArgument);
+
+	} else if (strcaseequal(key.c_str(), kWPANTUNDProperty_StreamNet)) {
+		Data packet = any_to_data(value);
+
+		Data command = SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_WLEN_S), SPINEL_PROP_STREAM_NET, packet.data(), packet.size());
+
+		syslog(LOG_NOTICE, "StreamNet traffic");
+
+		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
+				.set_callback(cb)
+				.add_command(command)
+				.finish()
+				);
+	} else {
+		NCPInstanceBase::property_set_value(key, value, cb);
+	}
 	} catch (const std::invalid_argument &x) {
 		// We will get a bad_any_cast exception if the property is of
 		// the wrong type.
@@ -3679,10 +3829,10 @@ SpinelNCPInstance::property_set_value(
 
 void
 SpinelNCPInstance::property_insert_value(
-	const std::string& key,
-	const boost::any& value,
-	CallbackWithStatus cb
-) {
+		const std::string& key,
+		const boost::any& value,
+		CallbackWithStatus cb
+		) {
 	syslog(LOG_INFO, "property_insert_value: key: \"%s\"", key.c_str());
 
 	if (!mEnabled) {
@@ -3703,17 +3853,17 @@ SpinelNCPInstance::property_insert_value(
 			} else {
 				if (ext_address.size() == sizeof(spinel_eui64_t)) {
 					start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-						.set_callback(cb)
-						.add_command(
-							SpinelPackData(
-								SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(SPINEL_DATATYPE_EUI64_S SPINEL_DATATYPE_INT8_S),
-								SPINEL_PROP_MAC_WHITELIST,
-								ext_address.data(),
-								rssi
-							)
-						)
-						.finish()
-					);
+							.set_callback(cb)
+							.add_command(
+								SpinelPackData(
+									SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(SPINEL_DATATYPE_EUI64_S SPINEL_DATATYPE_INT8_S),
+									SPINEL_PROP_MAC_WHITELIST,
+									ext_address.data(),
+									rssi
+									)
+								)
+							.finish()
+							);
 				} else {
 					cb(kWPANTUNDStatus_InvalidArgument);
 				}
@@ -3728,17 +3878,17 @@ SpinelNCPInstance::property_insert_value(
 			} else {
 				if (ext_address.size() == sizeof(spinel_eui64_t)) {
 					start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-						.set_callback(cb)
-						.add_command(
-							SpinelPackData(
-								SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(SPINEL_DATATYPE_EUI64_S SPINEL_DATATYPE_INT8_S),
-								SPINEL_PROP_MAC_BLACKLIST,
-								ext_address.data(),
-								rssi
-							)
-						)
-						.finish()
-					);
+							.set_callback(cb)
+							.add_command(
+								SpinelPackData(
+									SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(SPINEL_DATATYPE_EUI64_S SPINEL_DATATYPE_INT8_S),
+									SPINEL_PROP_MAC_BLACKLIST,
+									ext_address.data(),
+									rssi
+									)
+								)
+							.finish()
+							);
 				} else {
 					cb(kWPANTUNDStatus_InvalidArgument);
 				}
@@ -3761,10 +3911,10 @@ SpinelNCPInstance::property_insert_value(
 
 void
 SpinelNCPInstance::property_remove_value(
-	const std::string& key,
-	const boost::any& value,
-	CallbackWithStatus cb
-) {
+		const std::string& key,
+		const boost::any& value,
+		CallbackWithStatus cb
+		) {
 	syslog(LOG_INFO, "property_remove_value: key: \"%s\"", key.c_str());
 
 	try {
@@ -3779,16 +3929,16 @@ SpinelNCPInstance::property_remove_value(
 			} else {
 				if (ext_address.size() == sizeof(spinel_eui64_t)) {
 					start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-						.set_callback(cb)
-						.add_command(
-							SpinelPackData(
-								SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(SPINEL_DATATYPE_EUI64_S),
-								SPINEL_PROP_MAC_WHITELIST,
-								ext_address.data()
-							)
-						)
-						.finish()
-					);
+							.set_callback(cb)
+							.add_command(
+								SpinelPackData(
+									SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(SPINEL_DATATYPE_EUI64_S),
+									SPINEL_PROP_MAC_WHITELIST,
+									ext_address.data()
+									)
+								)
+							.finish()
+							);
 				} else {
 					cb(kWPANTUNDStatus_InvalidArgument);
 				}
@@ -3802,16 +3952,16 @@ SpinelNCPInstance::property_remove_value(
 			} else {
 				if (ext_address.size() == sizeof(spinel_eui64_t)) {
 					start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-						.set_callback(cb)
-						.add_command(
-							SpinelPackData(
-								SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(SPINEL_DATATYPE_EUI64_S),
-								SPINEL_PROP_MAC_BLACKLIST,
-								ext_address.data()
-							)
-						)
-						.finish()
-					);
+							.set_callback(cb)
+							.add_command(
+								SpinelPackData(
+									SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(SPINEL_DATATYPE_EUI64_S),
+									SPINEL_PROP_MAC_BLACKLIST,
+									ext_address.data()
+									)
+								)
+							.finish()
+							);
 				} else {
 					cb(kWPANTUNDStatus_InvalidArgument);
 				}
@@ -3852,7 +4002,7 @@ SpinelNCPInstance::property_remove_value(
 	}
 }
 
-void
+	void
 SpinelNCPInstance::reset_tasks(wpantund_status_t status)
 {
 	NCPInstanceBase::reset_tasks(status);
@@ -3862,7 +4012,7 @@ SpinelNCPInstance::reset_tasks(wpantund_status_t status)
 	}
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_value_is_ON_MESH_NETS(const uint8_t *value_data_ptr, spinel_size_t value_data_len)
 {
 	std::multimap<IPv6Prefix, OnMeshPrefixEntry>::iterator iter;
@@ -3879,39 +4029,39 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_ON_MESH_NETS(const uint8_t *value_
 		uint16_t rloc16 = 0;
 
 		len = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_STRUCT_S(
-				SPINEL_DATATYPE_IPv6ADDR_S // Prefix
-				SPINEL_DATATYPE_UINT8_S    // Prefix length (in bits)
-				SPINEL_DATATYPE_BOOL_S     // stable
-				SPINEL_DATATYPE_UINT8_S    // flags
-				SPINEL_DATATYPE_BOOL_S     // is_local
-				SPINEL_DATATYPE_UINT16_S   // RLOC16
-			),
-			&prefix_addr,
-			&prefix_len,
-			&stable,
-			&flags,
-			&is_local,
-			&rloc16
-		);
+				value_data_ptr,
+				value_data_len,
+				SPINEL_DATATYPE_STRUCT_S(
+					SPINEL_DATATYPE_IPv6ADDR_S // Prefix
+					SPINEL_DATATYPE_UINT8_S    // Prefix length (in bits)
+					SPINEL_DATATYPE_BOOL_S     // stable
+					SPINEL_DATATYPE_UINT8_S    // flags
+					SPINEL_DATATYPE_BOOL_S     // is_local
+					SPINEL_DATATYPE_UINT16_S   // RLOC16
+					),
+				&prefix_addr,
+				&prefix_len,
+				&stable,
+				&flags,
+				&is_local,
+				&rloc16
+				);
 
 		if (len <= 0) {
 			break;
 		}
 
 		syslog(
-			LOG_INFO,
-			"[-NCP-]: On-mesh net [%d] \"%s/%d\" stable:%s local:%s flags:%s, rloc16:0x%04x",
-			num_prefix,
-			in6_addr_to_string(*prefix_addr).c_str(),
-			prefix_len,
-			stable ? "yes" : "no",
-			is_local ? "yes" : "no",
-			on_mesh_prefix_flags_to_string(flags).c_str(),
-			rloc16
-		);
+				LOG_INFO,
+				"[-NCP-]: On-mesh net [%d] \"%s/%d\" stable:%s local:%s flags:%s, rloc16:0x%04x",
+				num_prefix,
+				in6_addr_to_string(*prefix_addr).c_str(),
+				prefix_len,
+				stable ? "yes" : "no",
+				is_local ? "yes" : "no",
+				on_mesh_prefix_flags_to_string(flags).c_str(),
+				rloc16
+			  );
 
 		num_prefix++;
 
@@ -3949,18 +4099,18 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_ON_MESH_NETS(const uint8_t *value_
 	for (iter = on_mesh_prefixes.begin(); iter != on_mesh_prefixes.end(); ++iter) {
 		if (iter->second.is_from_ncp()) {
 			on_mesh_prefix_was_removed(
-				kOriginThreadNCP,
-				iter->first.get_prefix(),
-				iter->first.get_length(),
-				iter->second.get_flags(),
-				iter->second.is_stable(),
-				iter->second.get_rloc()
-			);
+					kOriginThreadNCP,
+					iter->first.get_prefix(),
+					iter->first.get_length(),
+					iter->second.get_flags(),
+					iter->second.is_stable(),
+					iter->second.get_rloc()
+					);
 		}
 	}
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_value_is_OFF_MESH_ROUTES(const uint8_t* value_data_ptr, spinel_size_t value_data_len)
 {
 	std::multimap<IPv6Prefix, OffMeshRouteEntry>::iterator iter;
@@ -3979,25 +4129,25 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_OFF_MESH_ROUTES(const uint8_t* val
 		RoutePreference preference;
 
 		len = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_STRUCT_S(
-				SPINEL_DATATYPE_IPv6ADDR_S      // Route Prefix
-				SPINEL_DATATYPE_UINT8_S         // Prefix Length (in bits)
-				SPINEL_DATATYPE_BOOL_S          // isStable
-				SPINEL_DATATYPE_UINT8_S         // Flags
-				SPINEL_DATATYPE_BOOL_S          // IsLocal
-				SPINEL_DATATYPE_BOOL_S          // NextHopIsThisDevice
-				SPINEL_DATATYPE_UINT16_S        // RLOC16
-			),
-			&route_prefix,
-			&prefix_len,
-			&is_stable,
-			&flags,
-			&is_local,
-			&next_hop_is_this_device,
-			&rloc16
-		);
+				value_data_ptr,
+				value_data_len,
+				SPINEL_DATATYPE_STRUCT_S(
+					SPINEL_DATATYPE_IPv6ADDR_S      // Route Prefix
+					SPINEL_DATATYPE_UINT8_S         // Prefix Length (in bits)
+					SPINEL_DATATYPE_BOOL_S          // isStable
+					SPINEL_DATATYPE_UINT8_S         // Flags
+					SPINEL_DATATYPE_BOOL_S          // IsLocal
+					SPINEL_DATATYPE_BOOL_S          // NextHopIsThisDevice
+					SPINEL_DATATYPE_UINT16_S        // RLOC16
+					),
+				&route_prefix,
+				&prefix_len,
+				&is_stable,
+				&flags,
+				&is_local,
+				&next_hop_is_this_device,
+				&rloc16
+				);
 
 		if (len <= 0) {
 			break;
@@ -4006,9 +4156,9 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_OFF_MESH_ROUTES(const uint8_t* val
 		preference = convert_flags_to_route_preference(flags);
 
 		syslog(LOG_INFO, "[-NCP-]: Off-mesh route [%d] \"%s/%d\" stable:%s local:%s preference:%s, next_hop_is_this_device:%s, rloc16:0x%0x",
-			num_routes, in6_addr_to_string(*route_prefix).c_str(), prefix_len, is_stable ? "yes" : "no",
-			is_local ? "yes" : "no", NCPControlInterface::external_route_priority_to_string(preference).c_str(),
-			next_hop_is_this_device ? "yes" : "no", rloc16);
+				num_routes, in6_addr_to_string(*route_prefix).c_str(), prefix_len, is_stable ? "yes" : "no",
+				is_local ? "yes" : "no", NCPControlInterface::external_route_priority_to_string(preference).c_str(),
+				next_hop_is_this_device ? "yes" : "no", rloc16);
 
 		num_routes++;
 
@@ -4033,7 +4183,7 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_OFF_MESH_ROUTES(const uint8_t* val
 			}
 
 			route_was_added(kOriginThreadNCP, *route_prefix, prefix_len, preference, is_stable, rloc16,
-				next_hop_is_this_device);
+					next_hop_is_this_device);
 		}
 
 		value_data_ptr += len;
@@ -4046,12 +4196,12 @@ SpinelNCPInstance::handle_ncp_spinel_value_is_OFF_MESH_ROUTES(const uint8_t* val
 	for (iter = off_mesh_routes.begin(); iter != off_mesh_routes.end(); ++iter) {
 		if (iter->second.is_from_ncp()) {
 			route_was_removed(kOriginThreadNCP, iter->first.get_prefix(), iter->first.get_length(),
-				iter->second.get_preference(), iter->second.is_stable(), iter->second.get_rloc());
+					iter->second.get_preference(), iter->second.is_stable(), iter->second.get_rloc());
 		}
 	}
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8_t* value_data_ptr, spinel_size_t value_data_len)
 {
 	const uint8_t *original_value_data_ptr = value_data_ptr;
@@ -4067,15 +4217,15 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 			if (!mResetIsExpected && (mDriverState == NORMAL_OPERATION)) {
 				wpantund_status_t wstatus = kWPANTUNDStatus_NCP_Reset;
 				switch(status) {
-				case SPINEL_STATUS_RESET_CRASH:
-				case SPINEL_STATUS_RESET_FAULT:
-				case SPINEL_STATUS_RESET_ASSERT:
-				case SPINEL_STATUS_RESET_WATCHDOG:
-				case SPINEL_STATUS_RESET_OTHER:
-					wstatus = kWPANTUNDStatus_NCP_Crashed;
-					break;
-				default:
-					break;
+					case SPINEL_STATUS_RESET_CRASH:
+					case SPINEL_STATUS_RESET_FAULT:
+					case SPINEL_STATUS_RESET_ASSERT:
+					case SPINEL_STATUS_RESET_WATCHDOG:
+					case SPINEL_STATUS_RESET_OTHER:
+						wstatus = kWPANTUNDStatus_NCP_Crashed;
+						break;
+					default:
+						break;
 				}
 				reset_tasks(wstatus);
 			}
@@ -4176,24 +4326,24 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 
 		if (len > 0) {
 			syslog(LOG_INFO, "[-NCP-]: MCU power state \"%s\" (%d)",
-				spinel_mcu_power_state_to_cstr(static_cast<spinel_mcu_power_state_t>(power_state)), power_state);
+					spinel_mcu_power_state_to_cstr(static_cast<spinel_mcu_power_state_t>(power_state)), power_state);
 
 			switch (get_ncp_state()) {
-			case OFFLINE:
-			case COMMISSIONED:
-				if (power_state == SPINEL_MCU_POWER_STATE_LOW_POWER) {
-					change_ncp_state(DEEP_SLEEP);
-				}
-				break;
+				case OFFLINE:
+				case COMMISSIONED:
+					if (power_state == SPINEL_MCU_POWER_STATE_LOW_POWER) {
+						change_ncp_state(DEEP_SLEEP);
+					}
+					break;
 
-			case DEEP_SLEEP:
-				if (power_state == SPINEL_MCU_POWER_STATE_ON) {
-					change_ncp_state(mIsCommissioned ? COMMISSIONED : OFFLINE);
-				}
-				break;
+				case DEEP_SLEEP:
+					if (power_state == SPINEL_MCU_POWER_STATE_ON) {
+						change_ncp_state(mIsCommissioned ? COMMISSIONED : OFFLINE);
+					}
+					break;
 
-			default:
-				break;
+				default:
+					break;
 			}
 		}
 
@@ -4416,8 +4566,8 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 			syslog(LOG_INFO, "[-NCP-]: Net Role \"%s\" (%d)", spinel_net_role_to_cstr(value), value);
 
 			if (ncp_state_is_joining_or_joined(get_ncp_state())
-			  && (value != SPINEL_NET_ROLE_DETACHED)
-			) {
+					&& (value != SPINEL_NET_ROLE_DETACHED)
+			   ) {
 				change_ncp_state(ASSOCIATED);
 			}
 
@@ -4456,17 +4606,17 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 
 			switch (mNodeType)
 			{
-			case END_DEVICE:
-			case SLEEPY_END_DEVICE:
-				if ((mThreadMode & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) != 0) {
-					update_node_type(END_DEVICE);
-				} else {
-					update_node_type(SLEEPY_END_DEVICE);
-				}
-				break;
+				case END_DEVICE:
+				case SLEEPY_END_DEVICE:
+					if ((mThreadMode & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) != 0) {
+						update_node_type(END_DEVICE);
+					} else {
+						update_node_type(SLEEPY_END_DEVICE);
+					}
+					break;
 
-			default:
-				break;
+				default:
+					break;
 			}
 		}
 
@@ -4582,28 +4732,28 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 
 			// Unpack the packet.
 			ret = spinel_datatype_unpack(
-				value_data_ptr,
-				value_data_len,
-				SPINEL_DATATYPE_DATA_WLEN_S SPINEL_DATATYPE_DATA_S,
-				&frame_ptr,
-				&frame_len,
-				&meta_ptr,
-				&meta_len
-			);
+					value_data_ptr,
+					value_data_len,
+					SPINEL_DATATYPE_DATA_WLEN_S SPINEL_DATATYPE_DATA_S,
+					&frame_ptr,
+					&frame_len,
+					&meta_ptr,
+					&meta_len
+					);
 
 			require(ret > 0, bail);
 
 			// Unpack the metadata.
 			ret = spinel_datatype_unpack(
-				meta_ptr,
-				meta_len,
-				SPINEL_DATATYPE_INT8_S     // RSSI/TXPower
-				SPINEL_DATATYPE_INT8_S     // Noise Floor
-				SPINEL_DATATYPE_UINT16_S,  // Flags
-				NULL,   // Ignore RSSI/TXPower
-				NULL,	// Ignore Noise Floor
-				&flags
-			);
+					meta_ptr,
+					meta_len,
+					SPINEL_DATATYPE_INT8_S     // RSSI/TXPower
+					SPINEL_DATATYPE_INT8_S     // Noise Floor
+					SPINEL_DATATYPE_UINT16_S,  // Flags
+					NULL,   // Ignore RSSI/TXPower
+					NULL,	// Ignore Noise Floor
+					&flags
+					);
 
 			__ASSERT_MACROS_check(ret > 0);
 
@@ -4615,10 +4765,10 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 			}
 
 			mPcapManager.push_packet(
-				packet
+					packet
 					.append_ppi_field(PCAP_PPI_TYPE_SPINEL, meta_ptr, meta_len)
 					.append_payload(frame_ptr, frame_len)
-			);
+					);
 		}
 
 	} else if (key == SPINEL_PROP_THREAD_TMF_PROXY_STREAM) {
@@ -4630,14 +4780,14 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		Data data;
 
 		ret = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_UINT16_S SPINEL_DATATYPE_UINT16_S,
-			&frame_ptr,
-			&frame_len,
-			&locator,
-			&port
-		);
+				value_data_ptr,
+				value_data_len,
+				SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_UINT16_S SPINEL_DATATYPE_UINT16_S,
+				&frame_ptr,
+				&frame_len,
+				&locator,
+				&port
+				);
 
 		__ASSERT_MACROS_check(ret > 0);
 
@@ -4664,18 +4814,18 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		Data data;
 
 		ret = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_DATA_S
-			SPINEL_DATATYPE_UINT16_S    // Peer port
-			SPINEL_DATATYPE_IPv6ADDR_S  // Peer address
-			SPINEL_DATATYPE_UINT16_S,   // Sock port
-			&frame_ptr,
-			&frame_len,
-			&peer_port,
-			&peer_addr,
-			&sock_port
-		);
+				value_data_ptr,
+				value_data_len,
+				SPINEL_DATATYPE_DATA_S
+				SPINEL_DATATYPE_UINT16_S    // Peer port
+				SPINEL_DATATYPE_IPv6ADDR_S  // Peer address
+				SPINEL_DATATYPE_UINT16_S,   // Sock port
+				&frame_ptr,
+				&frame_len,
+				&peer_port,
+				&peer_addr,
+				&sock_port
+				);
 
 		__ASSERT_MACROS_check(ret > 0);
 
@@ -4704,14 +4854,14 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		}
 
 		ret = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_DATA_S,
-			&frame_ptr,
-			&frame_len,
-			NULL,
-			NULL
-		);
+				value_data_ptr,
+				value_data_len,
+				SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_DATA_S,
+				&frame_ptr,
+				&frame_len,
+				NULL,
+				NULL
+				);
 
 		__ASSERT_MACROS_check(ret > 0);
 
@@ -4783,8 +4933,8 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 	} else if (key == SPINEL_PROP_THREAD_ADDRESS_CACHE_TABLE) {
 		boost::any value;
 		if ((unpack_address_cache_table(value_data_ptr, value_data_len, value, false) == kWPANTUNDStatus_Ok)
-			&& (value.type() == typeid(std::list<std::string>))
-		) {
+				&& (value.type() == typeid(std::list<std::string>))
+		   ) {
 			std::list<std::string> list = boost::any_cast<std::list<std::string> >(value);
 			int num_entries = 0;
 
@@ -4826,28 +4976,55 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		uint32_t timeout = 0;
 		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT32_S, &timeout);
 		syslog(LOG_INFO, "[-NCP-] BBR MLR Timeout: %u (0x%x)", timeout, timeout);
+
+	} else if (key == SPINEL_PROP_THREAD_DOMAIN_NAME) {
+		const char* value = NULL;
+		spinel_ssize_t len = spinel_datatype_unpack(value_data_ptr, value_data_len, "U", &value);
+
+		if ((len <= 0) || (value == NULL)) {
+			syslog(LOG_CRIT, "[-NCP-]: Got a domain name");
+			// TODO: Properly handle NCP Misbehavior
+			change_ncp_state(FAULT);
+		} else {
+			syslog(LOG_INFO, "[-NCP-]: Domain name \"%s\"", value);
+			if (mDomainName != value) {
+				mDomainName = value;
+				signal_property_changed(kWPANTUNDProperty_ThreadDomainName, mDomainName);
+			}
+		}
+
+	} else if (key == SPINEL_PROP_THREAD_LOCAL_BBR_DATASET) {
+		ThreadBbrDataset bbrData;
+		std::list<std::string> list;
+		bbrData.set_from_spinel_frame(value_data_ptr, value_data_len);
+		bbrData.convert_to_string_list(list);
+		syslog(LOG_CRIT, "[-NCP-]: local bbr dataset");
+		for (std::list<std::string>::iterator it = list.begin(); it != list.end(); it++)
+		{
+			syslog(LOG_CRIT, "[-NCP-]: %s", (*it).c_str());
+		}
 	}
 
 bail:
 	process_event(EVENT_NCP_PROP_VALUE_IS, key, original_value_data_ptr, original_value_data_len);
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_value_inserted(spinel_prop_key_t key, const uint8_t* value_data_ptr, spinel_size_t value_data_len)
 {
 	if (key == SPINEL_PROP_IPV6_ADDRESS_TABLE) {
-			struct in6_addr *addr = NULL;
-			uint8_t prefix_len = 0;
-			uint32_t valid_lifetime = 0xFFFFFFFF;
-			uint32_t preferred_lifetime = 0xFFFFFFFF;
+		struct in6_addr *addr = NULL;
+		uint8_t prefix_len = 0;
+		uint32_t valid_lifetime = 0xFFFFFFFF;
+		uint32_t preferred_lifetime = 0xFFFFFFFF;
 
-			spinel_datatype_unpack(value_data_ptr, value_data_len, "6CLL", &addr, &prefix_len, &valid_lifetime, &preferred_lifetime);
+		spinel_datatype_unpack(value_data_ptr, value_data_len, "6CLL", &addr, &prefix_len, &valid_lifetime, &preferred_lifetime);
 
-			if (addr != NULL) {
-				if (!should_filter_address(*addr, prefix_len)) {
-					unicast_address_was_added(kOriginThreadNCP, *addr, prefix_len, valid_lifetime, preferred_lifetime);
-				}
+		if (addr != NULL) {
+			if (!should_filter_address(*addr, prefix_len)) {
+				unicast_address_was_added(kOriginThreadNCP, *addr, prefix_len, valid_lifetime, preferred_lifetime);
 			}
+		}
 
 	} else if (key == SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE) {
 		struct in6_addr *addr = NULL;
@@ -4876,16 +5053,16 @@ SpinelNCPInstance::handle_ncp_spinel_value_inserted(spinel_prop_key_t key, const
 		ValueMap entry;
 
 		len = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			(
-				SPINEL_DATATYPE_UINT32_S
-				SPINEL_DATATYPE_DATA_WLEN_S
-			),
-			&channel_mask,
-			&energy_data,
-			&energy_data_len
-		);
+				value_data_ptr,
+				value_data_len,
+				(
+				 SPINEL_DATATYPE_UINT32_S
+				 SPINEL_DATATYPE_DATA_WLEN_S
+				),
+				&channel_mask,
+				&energy_data,
+				&energy_data_len
+				);
 
 		__ASSERT_MACROS_check(len > 0);
 
@@ -4905,15 +5082,15 @@ SpinelNCPInstance::handle_ncp_spinel_value_inserted(spinel_prop_key_t key, const
 		ValueMap entry;
 
 		len = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			(
-				SPINEL_DATATYPE_UINT16_S
-				SPINEL_DATATYPE_UINT32_S
-			),
-			&panid,
-			&channel_mask
-		);
+				value_data_ptr,
+				value_data_len,
+				(
+				 SPINEL_DATATYPE_UINT16_S
+				 SPINEL_DATATYPE_UINT32_S
+				),
+				&panid,
+				&channel_mask
+				);
 
 		__ASSERT_MACROS_check(len > 0);
 
@@ -4930,7 +5107,7 @@ SpinelNCPInstance::handle_ncp_spinel_value_inserted(spinel_prop_key_t key, const
 	process_event(EVENT_NCP_PROP_VALUE_INSERTED, key, value_data_ptr, value_data_len);
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_value_removed(spinel_prop_key_t key, const uint8_t* value_data_ptr, spinel_size_t value_data_len)
 {
 	if (key == SPINEL_PROP_THREAD_CHILD_TABLE) {
@@ -4948,14 +5125,14 @@ SpinelNCPInstance::handle_ncp_spinel_value_removed(spinel_prop_key_t key, const 
 	process_event(EVENT_NCP_PROP_VALUE_REMOVED, key, value_data_ptr, value_data_len);
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_state_change(NCPState new_ncp_state, NCPState old_ncp_state)
 {
 	NCPInstanceBase::handle_ncp_state_change(new_ncp_state, old_ncp_state);
 
 	if ( ncp_state_is_joining_or_joined(old_ncp_state)
-	  && (new_ncp_state == OFFLINE)
-	) {
+			&& (new_ncp_state == OFFLINE)
+	   ) {
 		// Mark this as false so that if we are actually doing
 		// a pcap right now it will force the details to be updated
 		// on the NCP at the next run through the main loop. This
@@ -4965,124 +5142,124 @@ SpinelNCPInstance::handle_ncp_state_change(NCPState new_ncp_state, NCPState old_
 	}
 
 	if (ncp_state_is_associated(new_ncp_state)
-	 && !ncp_state_is_associated(old_ncp_state)
-	) {
+			&& !ncp_state_is_associated(old_ncp_state)
+	   ) {
 		mIsCommissioned = true;
 		start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_MAC_15_4_LADDR))
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ML_ADDR))
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_NET_XPANID))
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_MAC_15_4_PANID))
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_PHY_CHAN))
-			.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ADDRESS_TABLE))
-			.finish()
-		);
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_MAC_15_4_LADDR))
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ML_ADDR))
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_NET_XPANID))
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_MAC_15_4_PANID))
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_PHY_CHAN))
+				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ADDRESS_TABLE))
+				.finish()
+				);
 	} else if (ncp_state_is_joining(new_ncp_state)
-	 && !ncp_state_is_joining(old_ncp_state)
-	) {
+			&& !ncp_state_is_joining(old_ncp_state)
+			) {
 		if (!buffer_is_nonzero(mNCPV6Prefix, 8)) {
 			start_new_task(SpinelNCPTaskSendCommand::Factory(this)
-				.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ML_PREFIX))
-				.finish()
-			);
+					.add_command(SpinelPackData(SPINEL_FRAME_PACK_CMD_PROP_VALUE_GET, SPINEL_PROP_IPV6_ML_PREFIX))
+					.finish()
+					);
 		}
 	}
 }
 
-void
+	void
 SpinelNCPInstance::handle_ncp_spinel_callback(unsigned int command, const uint8_t* cmd_data_ptr, spinel_size_t cmd_data_len)
 {
 	switch (command) {
-	case SPINEL_CMD_PROP_VALUE_IS:
-		{
-			spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
-			uint8_t* value_data_ptr = NULL;
-			spinel_size_t value_data_len = 0;
-			spinel_ssize_t ret;
+		case SPINEL_CMD_PROP_VALUE_IS:
+			{
+				spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
+				uint8_t* value_data_ptr = NULL;
+				spinel_size_t value_data_len = 0;
+				spinel_ssize_t ret;
 
-			ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
+				ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
 
-			__ASSERT_MACROS_check(ret != -1);
+				__ASSERT_MACROS_check(ret != -1);
 
-			if (ret == -1) {
-				return;
+				if (ret == -1) {
+					return;
+				}
+
+				if ((key != SPINEL_PROP_STREAM_DEBUG) && (key != SPINEL_PROP_STREAM_LOG)) {
+					syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_IS(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+				}
+
+				return handle_ncp_spinel_value_is(key, value_data_ptr, value_data_len);
 			}
+			break;
 
-			if ((key != SPINEL_PROP_STREAM_DEBUG) && (key != SPINEL_PROP_STREAM_LOG)) {
-				syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_IS(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+		case SPINEL_CMD_PROP_VALUE_INSERTED:
+			{
+				spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
+				uint8_t* value_data_ptr = NULL;
+				spinel_size_t value_data_len = 0;
+				spinel_ssize_t ret;
+
+				ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
+
+				__ASSERT_MACROS_check(ret != -1);
+
+				if (ret == -1) {
+					return;
+				}
+
+				syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_INSERTED(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+
+				return handle_ncp_spinel_value_inserted(key, value_data_ptr, value_data_len);
 			}
+			break;
 
-			return handle_ncp_spinel_value_is(key, value_data_ptr, value_data_len);
-		}
-		break;
+		case SPINEL_CMD_PROP_VALUE_REMOVED:
+			{
+				spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
+				uint8_t* value_data_ptr = NULL;
+				spinel_size_t value_data_len = 0;
+				spinel_ssize_t ret;
 
-	case SPINEL_CMD_PROP_VALUE_INSERTED:
-		{
-			spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
-			uint8_t* value_data_ptr = NULL;
-			spinel_size_t value_data_len = 0;
-			spinel_ssize_t ret;
+				ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
 
-			ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
+				__ASSERT_MACROS_check(ret != -1);
 
-			__ASSERT_MACROS_check(ret != -1);
+				if (ret == -1) {
+					return;
+				}
 
-			if (ret == -1) {
-				return;
+				syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_REMOVED(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+
+				return handle_ncp_spinel_value_removed(key, value_data_ptr, value_data_len);
 			}
+			break;
 
-			syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_INSERTED(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+		case SPINEL_CMD_PEEK_RET:
+			{
+				uint32_t address = 0;
+				uint16_t count = 0;
+				spinel_ssize_t ret;
 
-			return handle_ncp_spinel_value_inserted(key, value_data_ptr, value_data_len);
-		}
-		break;
+				ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiLS", NULL, NULL, &address, &count);
 
-	case SPINEL_CMD_PROP_VALUE_REMOVED:
-		{
-			spinel_prop_key_t key = SPINEL_PROP_LAST_STATUS;
-			uint8_t* value_data_ptr = NULL;
-			spinel_size_t value_data_len = 0;
-			spinel_ssize_t ret;
+				__ASSERT_MACROS_check(ret != -1);
 
-			ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiiD", NULL, NULL, &key, &value_data_ptr, &value_data_len);
-
-			__ASSERT_MACROS_check(ret != -1);
-
-			if (ret == -1) {
-				return;
+				if (ret > 0) {
+					syslog(LOG_INFO, "[NCP->] CMD_PEEK_RET(0x%x,%d) tid:%d", address, count, SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
+				}
 			}
-
-			syslog(LOG_INFO, "[NCP->] CMD_PROP_VALUE_REMOVED(%s) tid:%d", spinel_prop_key_to_cstr(key), SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
-
-			return handle_ncp_spinel_value_removed(key, value_data_ptr, value_data_len);
-		}
-		break;
-
-	case SPINEL_CMD_PEEK_RET:
-		{
-			uint32_t address = 0;
-			uint16_t count = 0;
-			spinel_ssize_t ret;
-
-			ret = spinel_datatype_unpack(cmd_data_ptr, cmd_data_len, "CiLS", NULL, NULL, &address, &count);
-
-			__ASSERT_MACROS_check(ret != -1);
-
-			if (ret > 0) {
-				syslog(LOG_INFO, "[NCP->] CMD_PEEK_RET(0x%x,%d) tid:%d", address, count, SPINEL_HEADER_GET_TID(cmd_data_ptr[0]));
-			}
-		}
-		break;
+			break;
 
 
-	default:
-		break;
+		default:
+			break;
 	}
 
 	process_event(EVENT_NCP(command), cmd_data_ptr[0], cmd_data_ptr, cmd_data_len);
 }
 
-bool
+	bool
 SpinelNCPInstance::should_filter_address(const struct in6_addr &addr, uint8_t prefix_len)
 {
 	static const uint8_t rloc_bytes[] = {0x00,0x00,0x00,0xFF,0xFE,0x00};
@@ -5097,8 +5274,8 @@ SpinelNCPInstance::should_filter_address(const struct in6_addr &addr, uint8_t pr
 			}
 
 			if (buffer_is_nonzero(mNCPV6Prefix, sizeof(mNCPV6Prefix))
-				&& (0 == memcmp(mNCPV6Prefix, &addr, sizeof(mNCPV6Prefix)))
-			) {
+					&& (0 == memcmp(mNCPV6Prefix, &addr, sizeof(mNCPV6Prefix)))
+			   ) {
 				should_filter = true;
 			}
 		}
@@ -5107,7 +5284,7 @@ SpinelNCPInstance::should_filter_address(const struct in6_addr &addr, uint8_t pr
 	return should_filter;
 }
 
-void
+	void
 SpinelNCPInstance::filter_addresses(void)
 {
 	std::map<struct in6_addr, UnicastAddressEntry> unicast_addresses(mUnicastAddresses);
@@ -5128,7 +5305,7 @@ SpinelNCPInstance::filter_addresses(void)
 	}
 }
 
-void
+	void
 SpinelNCPInstance::add_unicast_address_on_ncp(const struct in6_addr &addr, uint8_t prefix_len, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
@@ -5138,25 +5315,25 @@ SpinelNCPInstance::add_unicast_address_on_ncp(const struct in6_addr &addr, uint8
 	factory.set_callback(cb);
 
 	factory.add_command(
-		SpinelPackData(
-			SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
-				SPINEL_DATATYPE_IPv6ADDR_S   // Address
-				SPINEL_DATATYPE_UINT8_S      // Prefix Length
-				SPINEL_DATATYPE_UINT32_S     // Valid Lifetime
-				SPINEL_DATATYPE_UINT32_S     // Preferred Lifetime
-			),
-			SPINEL_PROP_IPV6_ADDRESS_TABLE,
-			&addr,
-			prefix_len,
-			UINT32_MAX,
-			UINT32_MAX
-		)
-	);
+			SpinelPackData(
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+					SPINEL_DATATYPE_IPv6ADDR_S   // Address
+					SPINEL_DATATYPE_UINT8_S      // Prefix Length
+					SPINEL_DATATYPE_UINT32_S     // Valid Lifetime
+					SPINEL_DATATYPE_UINT32_S     // Preferred Lifetime
+					),
+				SPINEL_PROP_IPV6_ADDRESS_TABLE,
+				&addr,
+				prefix_len,
+				UINT32_MAX,
+				UINT32_MAX
+				)
+			);
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::remove_unicast_address_on_ncp(const struct in6_addr& addr, uint8_t prefix_len, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
@@ -5166,21 +5343,21 @@ SpinelNCPInstance::remove_unicast_address_on_ncp(const struct in6_addr& addr, ui
 	factory.set_callback(cb);
 
 	factory.add_command(
-		SpinelPackData(
-			SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
-				SPINEL_DATATYPE_IPv6ADDR_S   // Address
-				SPINEL_DATATYPE_UINT8_S      // Prefix
-			),
-			SPINEL_PROP_IPV6_ADDRESS_TABLE,
-			&addr,
-			prefix_len
-		)
-	);
+			SpinelPackData(
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+					SPINEL_DATATYPE_IPv6ADDR_S   // Address
+					SPINEL_DATATYPE_UINT8_S      // Prefix
+					),
+				SPINEL_PROP_IPV6_ADDRESS_TABLE,
+				&addr,
+				prefix_len
+				)
+			);
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::add_multicast_address_on_ncp(const struct in6_addr &addr, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
@@ -5190,19 +5367,19 @@ SpinelNCPInstance::add_multicast_address_on_ncp(const struct in6_addr &addr, Cal
 	factory.set_callback(cb);
 
 	factory.add_command(
-		SpinelPackData(
-			SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
-				SPINEL_DATATYPE_IPv6ADDR_S   // Address
-			),
-			SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE,
-			&addr
-		)
-	);
+			SpinelPackData(
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+					SPINEL_DATATYPE_IPv6ADDR_S   // Address
+					),
+				SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE,
+				&addr
+				)
+			);
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::remove_multicast_address_on_ncp(const struct in6_addr &addr, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
@@ -5212,21 +5389,21 @@ SpinelNCPInstance::remove_multicast_address_on_ncp(const struct in6_addr &addr, 
 	factory.set_callback(cb);
 
 	factory.add_command(
-		SpinelPackData(
-			SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
-				SPINEL_DATATYPE_IPv6ADDR_S   // Address
-			),
-			SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE,
-			&addr
-		)
-	);
+			SpinelPackData(
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+					SPINEL_DATATYPE_IPv6ADDR_S   // Address
+					),
+				SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE,
+				&addr
+				)
+			);
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::add_on_mesh_prefix_on_ncp(const struct in6_addr &prefix, uint8_t prefix_len, uint8_t flags,
-	bool stable, CallbackWithStatus cb)
+		bool stable, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
 
@@ -5236,25 +5413,25 @@ SpinelNCPInstance::add_on_mesh_prefix_on_ncp(const struct in6_addr &prefix, uint
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
-			SPINEL_DATATYPE_IPv6ADDR_S
-			SPINEL_DATATYPE_UINT8_S
-			SPINEL_DATATYPE_BOOL_S
-			SPINEL_DATATYPE_UINT8_S
-		),
-		SPINEL_PROP_THREAD_ON_MESH_NETS,
-		&prefix,
-		prefix_len,
-		stable,
-		flags
-	));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_BOOL_S
+					SPINEL_DATATYPE_UINT8_S
+					),
+				SPINEL_PROP_THREAD_ON_MESH_NETS,
+				&prefix,
+				prefix_len,
+				stable,
+				flags
+				));
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::remove_on_mesh_prefix_on_ncp(const struct in6_addr &prefix, uint8_t prefix_len, uint8_t flags,
-	bool stable, CallbackWithStatus cb)
+		bool stable, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
 
@@ -5264,81 +5441,81 @@ SpinelNCPInstance::remove_on_mesh_prefix_on_ncp(const struct in6_addr &prefix, u
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
-			SPINEL_DATATYPE_IPv6ADDR_S
-			SPINEL_DATATYPE_UINT8_S
-			SPINEL_DATATYPE_BOOL_S
-			SPINEL_DATATYPE_UINT8_S
-		),
-		SPINEL_PROP_THREAD_ON_MESH_NETS,
-		&prefix,
-		prefix_len,
-		stable,
-		flags
-	));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_BOOL_S
+					SPINEL_DATATYPE_UINT8_S
+					),
+				SPINEL_PROP_THREAD_ON_MESH_NETS,
+				&prefix,
+				prefix_len,
+				stable,
+				flags
+				));
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::add_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
-	bool stable, CallbackWithStatus cb)
+		bool stable, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
 
 	syslog(LOG_NOTICE, "Adding off-mesh route \"%s/%d\" with preference %s to NCP", in6_addr_to_string(route).c_str(),
-		prefix_len, NCPControlInterface::external_route_priority_to_string(preference).c_str());
+			prefix_len, NCPControlInterface::external_route_priority_to_string(preference).c_str());
 
 	factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
-			SPINEL_DATATYPE_IPv6ADDR_S
-			SPINEL_DATATYPE_UINT8_S
-			SPINEL_DATATYPE_BOOL_S
-			SPINEL_DATATYPE_UINT8_S
-		),
-		SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
-		&route,
-		prefix_len,
-		stable,
-		convert_route_preference_to_flags(preference)
-	));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_BOOL_S
+					SPINEL_DATATYPE_UINT8_S
+					),
+				SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
+				&route,
+				prefix_len,
+				stable,
+				convert_route_preference_to_flags(preference)
+				));
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::remove_route_on_ncp(const struct in6_addr &route, uint8_t prefix_len, RoutePreference preference,
-	bool stable, CallbackWithStatus cb)
+		bool stable, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
 
 	syslog(LOG_NOTICE, "Removing off-mesh route \"%s/%d\" with preference %s from NCP", in6_addr_to_string(route).c_str(),
-		prefix_len, NCPControlInterface::external_route_priority_to_string(preference).c_str());
+			prefix_len, NCPControlInterface::external_route_priority_to_string(preference).c_str());
 
 	factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
-			SPINEL_DATATYPE_IPv6ADDR_S
-			SPINEL_DATATYPE_UINT8_S
-			SPINEL_DATATYPE_BOOL_S
-			SPINEL_DATATYPE_UINT8_S
-		),
-		SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
-		&route,
-		prefix_len,
-		stable,
-		convert_route_preference_to_flags(preference)
-	));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_BOOL_S
+					SPINEL_DATATYPE_UINT8_S
+					),
+				SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
+				&route,
+				prefix_len,
+				stable,
+				convert_route_preference_to_flags(preference)
+				));
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::add_eidcache_on_ncp(const struct in6_addr &address, const uint8_t **iid, uint16_t rloc,
 		CallbackWithStatus cb)
 {
@@ -5352,21 +5529,21 @@ SpinelNCPInstance::add_eidcache_on_ncp(const struct in6_addr &address, const uin
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
-			SPINEL_DATATYPE_IPv6ADDR_S
-			SPINEL_DATATYPE_EUI64_S
-			SPINEL_DATATYPE_UINT16_S
-		),
-		SPINEL_PROP_THREAD_ARP_EIDCACHE,
-		&address,
-		iid_data.data(),
-		rloc
-		));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_INSERT(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					SPINEL_DATATYPE_EUI64_S
+					SPINEL_DATATYPE_UINT16_S
+					),
+				SPINEL_PROP_THREAD_ARP_EIDCACHE,
+				&address,
+				iid_data.data(),
+				rloc
+				));
 
 	start_new_task(factory.finish());
 }
 
-void
+	void
 SpinelNCPInstance::remove_eidcache_on_ncp(const struct in6_addr &address, CallbackWithStatus cb)
 {
 	SpinelNCPTaskSendCommand::Factory factory(this);
@@ -5376,72 +5553,178 @@ SpinelNCPInstance::remove_eidcache_on_ncp(const struct in6_addr &address, Callba
 	factory.set_callback(cb);
 
 	factory.add_command(SpinelPackData(
-		SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
-			SPINEL_DATATYPE_IPv6ADDR_S
-		),
-		SPINEL_PROP_THREAD_ARP_EIDCACHE,
-		&address
-	));
+				SPINEL_FRAME_PACK_CMD_PROP_VALUE_REMOVE(
+					SPINEL_DATATYPE_IPv6ADDR_S
+					),
+				SPINEL_PROP_THREAD_ARP_EIDCACHE,
+				&address
+				));
 
 	start_new_task(factory.finish());
 }
 
-SpinelNCPInstance::RoutePreference
+	SpinelNCPInstance::RoutePreference
 SpinelNCPInstance::convert_flags_to_route_preference(uint8_t flags)
 {
 	RoutePreference preference = NCPControlInterface::ROUTE_MEDIUM_PREFERENCE;
 
 	switch (flags & SPINEL_NET_FLAG_PREFERENCE_MASK) {
-	case SPINEL_ROUTE_PREFERENCE_HIGH:
-		preference = NCPControlInterface::ROUTE_HIGH_PREFERENCE;
-		break;
+		case SPINEL_ROUTE_PREFERENCE_HIGH:
+			preference = NCPControlInterface::ROUTE_HIGH_PREFERENCE;
+			break;
 
-	case SPINEL_ROUTE_PREFERENCE_MEDIUM:
-		preference = NCPControlInterface::ROUTE_MEDIUM_PREFERENCE;
-		break;
+		case SPINEL_ROUTE_PREFERENCE_MEDIUM:
+			preference = NCPControlInterface::ROUTE_MEDIUM_PREFERENCE;
+			break;
 
-	case SPINEL_ROUTE_PREFERENCE_LOW:
-		preference = NCPControlInterface::ROUTE_LOW_PREFRENCE;
-		break;
+		case SPINEL_ROUTE_PREFERENCE_LOW:
+			preference = NCPControlInterface::ROUTE_LOW_PREFRENCE;
+			break;
 
-	default:
-		syslog(LOG_WARNING, "Invalid RoutePreference flag 0x%02x (using MEDIUM instead)", flags);
-		break;
+		default:
+			syslog(LOG_WARNING, "Invalid RoutePreference flag 0x%02x (using MEDIUM instead)", flags);
+			break;
 	}
 
 	return preference;
 }
 
-uint8_t
+	uint8_t
 SpinelNCPInstance::convert_route_preference_to_flags(RoutePreference preference)
 {
 	uint8_t flags = SPINEL_ROUTE_PREFERENCE_MEDIUM;
 
 	switch (preference) {
-	case NCPControlInterface::ROUTE_HIGH_PREFERENCE:
-		flags = SPINEL_ROUTE_PREFERENCE_HIGH;
-		break;
+		case NCPControlInterface::ROUTE_HIGH_PREFERENCE:
+			flags = SPINEL_ROUTE_PREFERENCE_HIGH;
+			break;
 
-	case NCPControlInterface::ROUTE_MEDIUM_PREFERENCE:
-		flags = SPINEL_ROUTE_PREFERENCE_MEDIUM;
-		break;
+		case NCPControlInterface::ROUTE_MEDIUM_PREFERENCE:
+			flags = SPINEL_ROUTE_PREFERENCE_MEDIUM;
+			break;
 
-	case NCPControlInterface::ROUTE_LOW_PREFRENCE:
-		flags = SPINEL_ROUTE_PREFERENCE_LOW;
-		break;
+		case NCPControlInterface::ROUTE_LOW_PREFRENCE:
+			flags = SPINEL_ROUTE_PREFERENCE_LOW;
+			break;
 	}
 
 	return flags;
 }
 
-bool
+void
+SpinelNCPInstance::log_spinel_frame(SpinelFrameOrigin origin, const uint8_t *frame_ptr, spinel_size_t frame_len)
+{
+	int logmask = setlogmask(0);
+
+	setlogmask(logmask);
+
+	if (logmask & LOG_MASK(LOG_INFO)) {
+		std::string log;
+		uint8_t header = 0;
+		unsigned int command = 0;
+		const uint8_t *cmd_payload_ptr = NULL;
+		spinel_size_t cmd_payload_len = 0;
+		spinel_ssize_t read_len;
+		uint8_t tid;
+		const char *command_str;
+		const char *origin_str = (origin == kDriverToNCP) ? "[->NCP]" : "[NCP->]";
+
+		read_len = spinel_datatype_unpack(frame_ptr, frame_len, "CiD", &header, &command, &cmd_payload_ptr,
+			&cmd_payload_len);
+		require_quiet(read_len > 0, bail);
+
+		tid = SPINEL_HEADER_GET_TID(header);
+		command_str = spinel_command_to_cstr(command);
+
+		switch (command) {
+		case SPINEL_CMD_NOOP:
+		case SPINEL_CMD_RESET:
+		case SPINEL_CMD_NET_CLEAR:
+			syslog(LOG_INFO, "%s (%d) %s", origin_str, tid, command_str);
+			break;
+
+		case SPINEL_CMD_PROP_VALUE_GET:
+		case SPINEL_CMD_PROP_VALUE_SET:
+		case SPINEL_CMD_PROP_VALUE_INSERT:
+		case SPINEL_CMD_PROP_VALUE_REMOVE:
+		case SPINEL_CMD_PROP_VALUE_IS:
+		case SPINEL_CMD_PROP_VALUE_INSERTED:
+		case SPINEL_CMD_PROP_VALUE_REMOVED:
+			{
+				spinel_prop_key_t prop_key = SPINEL_PROP_LAST_STATUS;
+				const uint8_t *value_ptr = NULL;
+				spinel_size_t value_len = 0;
+				const char *prop_str;
+				bool skip_value_dump = false;
+				char value_dump_str[2 * kWPANTUND_SpinelPropValueDumpLen + 1];
+
+				read_len = spinel_datatype_unpack(cmd_payload_ptr, cmd_payload_len, "iD", &prop_key, &value_ptr,
+					&value_len);
+				require_quiet(read_len > 0, bail);
+
+				prop_str = spinel_prop_key_to_cstr(prop_key);
+
+				switch (prop_key) {
+				case SPINEL_PROP_STREAM_DEBUG:           // Handled by `handle_ncp_debug_stream()`
+				case SPINEL_PROP_STREAM_LOG:             // Handled by `handle_ncp_log_stream()`
+				case SPINEL_PROP_STREAM_NET:             // Handled by `handle_normal_ipv6_from_ncp()
+				case SPINEL_PROP_STREAM_NET_INSECURE:    // Handled by `handle_normal_ipv6_from_ncp()
+					// Skip logging any of above properties
+					goto bail;
+
+				case SPINEL_PROP_NET_MASTER_KEY:
+				case SPINEL_PROP_THREAD_ACTIVE_DATASET:
+				case SPINEL_PROP_THREAD_PENDING_DATASET:
+					// Hide the value by skipping value dump
+					skip_value_dump = true;
+					break;
+
+				default:
+					skip_value_dump = false;
+					encode_data_into_string(value_ptr, value_len, value_dump_str, sizeof(value_dump_str), 0);
+					break;
+				}
+
+				if (command == SPINEL_CMD_PROP_VALUE_GET) {
+					syslog(LOG_INFO, "%s (%d) %s(%s)", origin_str, tid, command_str, prop_str);
+				} else {
+					syslog(LOG_INFO, "%s (%d) %s(%s) [%s%s]", origin_str, tid, command_str, prop_str,
+						skip_value_dump ? "-- value hidden --" : value_dump_str,
+						skip_value_dump || (value_len <= kWPANTUND_SpinelPropValueDumpLen) ? "" : "...");
+				}
+			}
+			break;
+
+		case SPINEL_CMD_PEEK:
+		case SPINEL_CMD_POKE:
+		case SPINEL_CMD_PEEK_RET:
+			{
+				uint32_t address = 0;
+				uint16_t count = 0;
+				read_len = spinel_datatype_unpack(cmd_payload_ptr, cmd_payload_len, "LS", &address, &count);
+				require_quiet(read_len > 0, bail);
+				syslog(LOG_INFO, "%s (%d) %s(0x%x, %d)", origin_str, tid, command_str, address, count);
+			}
+			break;
+
+		default:
+			syslog(LOG_INFO, "%s (%d) %s(cmd_id:%d)", origin_str, tid, command_str, command);
+			break;
+		}
+	}
+
+bail:
+	return;
+}
+
+	bool
 SpinelNCPInstance::is_busy(void)
 {
 	return NCPInstanceBase::is_busy()
 		|| !mTaskQueue.empty();
 }
 
-void
+	void
 SpinelNCPInstance::process(void)
 {
 	NCPInstanceBase::process();
@@ -5457,30 +5740,30 @@ SpinelNCPInstance::process(void)
 			mIsPcapInProgress = x;
 
 			factory.add_command(SpinelPackData(
-				SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_BOOL_S),
-				SPINEL_PROP_MAC_RAW_STREAM_ENABLED,
-				mIsPcapInProgress
-			));
+						SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_BOOL_S),
+						SPINEL_PROP_MAC_RAW_STREAM_ENABLED,
+						mIsPcapInProgress
+						));
 
 			if (mIsPcapInProgress) {
 				factory.add_command(SpinelPackData(
-					SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_BOOL_S),
-					SPINEL_PROP_NET_IF_UP,
-					true
-				));
+							SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_BOOL_S),
+							SPINEL_PROP_NET_IF_UP,
+							true
+							));
 				if (!ncp_state_is_joining_or_joined(get_ncp_state())) {
 					factory.add_command(SpinelPackData(
-						SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S),
-						SPINEL_PROP_MAC_PROMISCUOUS_MODE,
-						SPINEL_MAC_PROMISCUOUS_MODE_FULL
-					));
+								SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S),
+								SPINEL_PROP_MAC_PROMISCUOUS_MODE,
+								SPINEL_MAC_PROMISCUOUS_MODE_FULL
+								));
 				}
 			} else {
 				factory.add_command(SpinelPackData(
-					SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S),
-					SPINEL_PROP_MAC_PROMISCUOUS_MODE,
-					SPINEL_MAC_PROMISCUOUS_MODE_OFF
-				));
+							SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_UINT8_S),
+							SPINEL_PROP_MAC_PROMISCUOUS_MODE,
+							SPINEL_MAC_PROMISCUOUS_MODE_OFF
+							));
 			}
 
 			start_new_task(factory.finish());
