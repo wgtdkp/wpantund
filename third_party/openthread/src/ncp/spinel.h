@@ -334,6 +334,7 @@ enum
     SPINEL_NCP_LOG_REGION_OT_CLI      = 14,
     SPINEL_NCP_LOG_REGION_OT_CORE     = 15,
     SPINEL_NCP_LOG_REGION_OT_UTIL     = 16,
+    SPINEL_NCP_LOG_REGION_OT_BH       = 17,
 };
 
 enum
@@ -2356,6 +2357,158 @@ typedef enum
      *
      */
     SPINEL_PROP_DATASET_DEST_ADDRESS = SPINEL_PROP_THREAD_EXT__BEGIN + 39,
+
+    /// Backbone Interface status
+    /** Format: `b` - write only
+     *
+     * This property notifies the ncp whether or not the backbone interface is up/down.
+     *
+     */
+    SPINEL_PROP_THREAD_BACKBONE_INTERFACE = SPINEL_PROP_THREAD_EXT__BEGIN + 60,
+    SPINEL_PROP_THREAD_BACKBONE_COAP_PORT = SPINEL_PROP_THREAD_EXT__BEGIN + 61, ///< [L]
+
+    SPINEL_PROP_THREAD_DOMAIN_NAME = SPINEL_PROP_THREAD_EXT__BEGIN + 62, ///< [U]
+
+    /// Domain Prefix Prefix
+    /** Format: `t(6CC))`
+     *
+     * Data per item is:
+     *
+     *  `6`: IPv6 Prefix
+     *  `C`: Prefix length in bits
+     *  `C`: TLV flags
+     *
+     */
+    SPINEL_PROP_THREAD_DOMAIN_PREFIX = SPINEL_PROP_THREAD_EXT__BEGIN + 63,
+
+    /// Primary State.
+    /** Format: `b` - Read only
+     *
+     * indicate whether is PBBR
+     *
+     */
+    SPINEL_PROP_THREAD_PRIMARY_STATE = SPINEL_PROP_THREAD_EXT__BEGIN + 69,
+
+    /// Primary BBR Dataset.
+    /** Format: `A(t(iD))` - Read-Write
+     *
+     * Data per item is:
+     *
+     *  `C`: Sequence Number
+     *  `S`: Reregistration Delay
+     *  `L`: MLR Timeout
+     *  `S`: RLOC16 or ALOC16 if the device only store stable network data
+     *
+     */
+    SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET = SPINEL_PROP_THREAD_EXT__BEGIN + 70,
+
+    /// local BBR Dataset.
+    /** Format: `A(t(iD))` - Write or read
+     *
+     * BBR Dataset consists of a set of properties (e.g., sequence number, reregistration delay, mlr timeout etc).
+     * Note that all perperties are present when read, but not all supported properties may be present (have a value)
+     * when write, if not present, continue to use the values before write.
+     *
+     * On write, the Dataset value is encoded as an array of structs containing pairs of property key (as `i`)
+     * followed by the property value (as `D`). The property value must follow the format associated with the
+     * corresponding property.
+     *
+     * On write, any unknown/unsupported property keys must be ignored.
+     *
+     * The following properties can be included in a Dataset list:
+     *
+     *   SPINEL_PROP_THREAD_BBR_DATASET_SEQUENCE_NUMBER
+     *   SPINEL_PROP_THREAD_BBR_DATASET_REREGISTRATION_DELAY
+     *   SPINEL_PROP_THREAD_BBR_DATASET_MLR_TIMEOUT
+     *   SPINEL_PROP_THREAD_BBR_DATASET_SERVER16
+     *
+     * On read, data per item is:
+     *
+     *  `C`: Sequence Number
+     *  `S`: Reregistration Delay
+     *  `L`: MLR Timeout
+     *  `S`: PBBR short address
+     *
+     */
+    SPINEL_PROP_THREAD_LOCAL_BBR_DATASET = SPINEL_PROP_THREAD_EXT__BEGIN + 71,
+
+    /// BBR Dataset Sequence Number
+    /** Format: `C` - No direct read or write
+     *
+     * It can only be included in one of the Dataset related properties below:
+     *
+     * SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET
+     * SPINEL_PROP_THREAD_LOCAL_BBR_DATASET
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DATASET_SEQUENCE_NUMBER = SPINEL_PROP_THREAD_EXT__BEGIN + 72,
+
+    /// BBR Dataset Reregistration Delay
+    /** Format: `S` - No direct read or write
+     *
+     * It can only be included in one of the Dataset related properties below:
+     *
+     * SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET
+     * SPINEL_PROP_THREAD_LOCAL_BBR_DATASET
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DATASET_REREGISTRATION_DELAY = SPINEL_PROP_THREAD_EXT__BEGIN + 73,
+
+    /// BBR Dataset Mlr Timeout
+    /** Format: `L` - No direct read or write
+     *
+     * It can only be included in one of the Dataset related properties below:
+     *
+     * SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET
+     * SPINEL_PROP_THREAD_LOCAL_BBR_DATASET
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DATASET_MLR_TIMEOUT = SPINEL_PROP_THREAD_EXT__BEGIN + 74,
+
+    /// PBBR Short address
+    /** Format: `S` - No direct read or write
+     *
+     * It can only be included in one of the Dataset related properties below:
+     *
+     * SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DATASET_SERVER16 = SPINEL_PROP_THREAD_EXT__BEGIN + 75,
+
+    /// Thread BBR Group Table
+    /** Format: [A(t(6L)] - Read only
+     *
+     * Data per item is:
+     *
+     *  `6`: IPv6 Address
+     *  `L`: Remaining valid period (s)
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_GROUP_TABLE = SPINEL_PROP_THREAD_EXT__BEGIN + 76,
+
+    /// Thread BBR Dua Table
+    /** Format: [A(t(6ELb)] - Read only
+     *
+     * Data per item is:
+     *
+     *  `6`: IPv6 Address
+     *  `E`: Mesh Local Iid
+     *  `L`: Time Since Last Registration Transaction
+     *  `b`: Dad flag
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DUA_TABLE = SPINEL_PROP_THREAD_EXT__BEGIN + 77,
+
+    /// Thread BBR Dad Table
+    /** Format: [A(t(6C)] - Read only
+     *
+     * Data per item is:
+     *
+     *  `6`: IPv6 Address
+     *  `C`: Dad stage
+     *
+     */
+    SPINEL_PROP_THREAD_BBR_DAD_TABLE = SPINEL_PROP_THREAD_EXT__BEGIN + 78,
 
     SPINEL_PROP_THREAD_EXT__END = 0x1600,
 
