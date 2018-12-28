@@ -285,6 +285,13 @@ NCPInstanceBase::get_supported_property_keys(void) const
 	properties.insert(kWPANTUNDProperty_ThreadOnMeshPrefixes);
 	properties.insert(kWPANTUNDProperty_ThreadOffMeshRoutes);
 
+	/*
+	properties.insert(kWPANTUNDProperty_ThreadDomainName);
+	properties.insert(kWPANTUNDProperty_ThreadDomainPrefix);
+	properties.insert(kWPANTUNDProperty_ThreadPrimaryBbr);
+	properties.insert(kWPANTUNDProperty_ThreadLocalBbr);
+	*/
+
 	properties.insert(kWPANTUNDProperty_DaemonAutoAssociateAfterReset);
 	properties.insert(kWPANTUNDProperty_DaemonAutoDeepSleep);
 	properties.insert(kWPANTUNDProperty_DaemonReadyForHostSleep);

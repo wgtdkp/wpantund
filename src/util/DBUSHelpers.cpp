@@ -242,6 +242,7 @@ DBUSHelpers::append_any_to_dbus_iter(
 		}
 
 		dbus_message_iter_close_container(iter, &array_iter);
+
 	} else if (value.type() == typeid(nl::Data)) {
 		DBusMessageIter array_iter;
 		const nl::Data& vector = boost::any_cast< nl::Data >(value);
@@ -262,6 +263,7 @@ DBUSHelpers::append_any_to_dbus_iter(
 		}
 
 		dbus_message_iter_close_container(iter, &array_iter);
+
 	} else if (value.type() == typeid(std::vector<uint8_t>)) {
 		DBusMessageIter array_iter;
 		const std::vector<uint8_t>& vector =
@@ -280,9 +282,11 @@ DBUSHelpers::append_any_to_dbus_iter(
 			dbus_message_iter_append_basic(&array_iter,
 			                               DBUS_TYPE_BYTE,
 			                               &*vector_iter);
+
 		}
 
 		dbus_message_iter_close_container(iter, &array_iter);
+
 	} else if (value.type() == typeid(std::set<int>)) {
 		DBusMessageIter array_iter;
 		const std::set<int>& container =

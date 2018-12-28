@@ -1691,6 +1691,58 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
         ret = "DATASET_DEST_ADDRESS";
         break;
 
+    case SPINEL_PROP_THREAD_DOMAIN_NAME:
+        ret = "PROP_THREAD_DOMAIN_NAME";
+        break;
+
+    case SPINEL_PROP_THREAD_DOMAIN_PREFIX:
+        ret = "PROP_THREAD_DOMAIN_PREFIX";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_PRIMARY_STATE:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_PRIMARY_STATE";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_INTERFACE:
+        ret = "PROP_THREAD_BACKBONE_INTERFACE";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_COAP_PORT:
+        ret = "PROP_THREAD_BACKBONE_COAP_PORT";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_PRIMARY:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_PRIMARY";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_LOCAL:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_LOCAL";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_SEQUENCE_NUMBER:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_SEQUENCE_NUMBER";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_REREGISTRATION_DELAY:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_REREGISTRATION_DELAY";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_MLR_TIMEOUT:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_MLR_TIMEOUT";
+        break;
+
+    case SPINEL_PROP_THREAD_BACKBONE_ROUTER_SERVER16:
+        ret = "PROP_THREAD_BACKBONE_ROUTER_SERVER16";
+        break;
+
+    case SPINEL_PROP_THREAD_GROUP_TABLE:
+        ret = "PROP_THREAD_GROUP_TABLE";
+        break;
+
+    case SPINEL_PROP_THREAD_NDPROXY_TABLE:
+        ret = "PROP_THREAD_NDPROXY_TABLE";
+        break;
+
     case SPINEL_PROP_MESHCOP_JOINER_STATE:
         ret = "MESHCOP_JOINER_STATE";
         break;
@@ -1849,6 +1901,10 @@ const char *spinel_prop_key_to_cstr(spinel_prop_key_t prop_key)
 
     case SPINEL_PROP_PARENT_RESPONSE_INFO:
         ret = "PARENT_RESPONSE_INFO";
+        break;
+
+    case SPINEL_PROP_SLAAC_ENABLED:
+        ret = "SLAAC_ENABLED";
         break;
 
     case SPINEL_PROP_UART_BITRATE:
@@ -2478,6 +2534,10 @@ const char *spinel_capability_to_cstr(unsigned int capability)
 
     case SPINEL_CAP_POSIX_APP:
         ret = "POSIX_APP";
+        break;
+
+    case SPINEL_CAP_SLAAC:
+        ret = "SLAAC";
         break;
 
     case SPINEL_CAP_ERROR_RATE_TRACKING:
