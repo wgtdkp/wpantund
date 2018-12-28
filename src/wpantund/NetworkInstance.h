@@ -33,6 +33,7 @@ namespace WPAN {
 struct NetworkId {
 	std::string name;
 	uint8_t xpanid[8];
+	std::string domainname;
 
 	uint64_t
 	get_xpanid_as_uint64() const
@@ -67,10 +68,12 @@ struct NetworkId {
 	NetworkId(const std::string& _name = "")
 		: name(_name)
 	{
+		domainname = "Thread";
 	}
 
 	NetworkId(
 	    const std::string& _name, const uint8_t _xpanid[8]
+		, const std::string &_domainname = "Thread"
 	    )
 		: name(_name)
 	{
@@ -79,19 +82,23 @@ struct NetworkId {
 		} else {
 			memset(xpanid, 0, sizeof(xpanid));
 		}
+		domainname = _domainname;
 	}
 
 	NetworkId(
 	    const std::string& _name, const uint64_t &_xpanid
+		, const std::string &_domainname = "Thread"
 	    )
 		: name(_name)
 	{
 		set_xpanid_as_uint64(_xpanid);
+		domainname = _domainname;
 	}
 
 	bool operator==(const NetworkId& rhs) const
 	{
 		return (name == rhs.name) &&
+			   (domainname == rhs.domainname) &&
 		       (0 == memcmp(xpanid, rhs.xpanid, sizeof(xpanid)));
 	}
 };

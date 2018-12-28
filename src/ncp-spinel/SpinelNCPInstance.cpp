@@ -475,6 +475,13 @@ SpinelNCPInstance::get_supported_property_keys()const
 	properties.insert(kWPANTUNDProperty_ThreadPendingDataset);
 	properties.insert(kWPANTUNDProperty_ThreadAddressCacheTable);
 
+	//TODO-BH: to introduce SPINEL_CAP_NET_THREAD_1_2
+	properties.insert(kWPANTUNDProperty_ThreadDomainName);
+	properties.insert(kWPANTUNDProperty_ThreadDomainPrefix);
+	properties.insert(kWPANTUNDProperty_ThreadBackboneCoapPort);
+	properties.insert(kWPANTUNDProperty_ThreadPrimaryBbr);
+	properties.insert(kWPANTUNDProperty_ThreadLocalBbr);
+
 	if (mCapabilities.count(SPINEL_CAP_ERROR_RATE_TRACKING)) {
 		properties.insert(kWPANTUNDProperty_ThreadNeighborTableErrorRates);
 	}
@@ -1223,6 +1230,47 @@ bail:
 	return ret;
 }
 
+
+static int
+unpack_domain_prefix(const uint8_t *data_in, spinel_size_t data_len, boost::any &value, bool as_val_map)
+{
+	int ret = kWPANTUNDStatus_Ok;
+	(void)as_val_map;
+	struct in6_addr prefix_addr;
+	char prefix_str[45];
+
+	memset(&prefix_addr, 0, sizeof(struct in6_addr));
+	memcpy(&prefix_addr, data_in, data_len);
+	snprintf(prefix_str, sizeof(prefix_str), "%s/64", in6_addr_to_string(prefix_addr).c_str());
+	value = prefix_str;
+
+bail:
+	return ret;
+}
+
+static int
+unpack_bbr_dataset(const uint8_t *data_in, spinel_size_t data_len, boost::any &value, bool as_val_map)
+{
+	int ret = kWPANTUNDStatus_Ok;
+	ThreadBbrDataset dataset;
+	ValueMap map;
+	std::list<std::string> list;
+
+	ret = dataset.set_from_spinel_frame(data_in, data_len);
+	require_noerr(ret, bail);
+
+	if (as_val_map) {
+		dataset.convert_to_valuemap(map);
+		value = map;
+	} else {
+		dataset.convert_to_string_list(list);
+		value = list;
+	}
+
+bail:
+	return ret;
+}
+
 static int 
 unpack_thread_network_time_spinel(const uint8_t *data_in, spinel_size_t data_len, uint64_t &time, int8_t &time_sync_status)
 {
@@ -1656,6 +1704,15 @@ SpinelNCPInstance::regsiter_all_get_handlers(void)
 	register_get_handler_spinel_simple(
 		kWPANTUNDProperty_OpenThreadLogLevel,
 		SPINEL_PROP_DEBUG_NCP_LOG_LEVEL, SPINEL_DATATYPE_UINT8_S);
+	register_get_handler_spinel_simple(
+		kWPANTUNDProperty_ThreadDomainName,
+		SPINEL_PROP_THREAD_DOMAIN_NAME, SPINEL_DATATYPE_UTF8_S);
+	register_get_handler_spinel(
+		kWPANTUNDProperty_ThreadBackboneInterface,
+		SPINEL_PROP_THREAD_BACKBONE_INTERFACE, SPINEL_DATATYPE_BOOL_S);
+	register_get_handler_spinel_simple(
+		kWPANTUNDProperty_ThreadBackboneCoapPort,
+		SPINEL_PROP_THREAD_BACKBONE_COAP_PORT, SPINEL_DATATYPE_UINT16_S);
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Properties requiring capability check and associated with a spinel property
@@ -1960,6 +2017,15 @@ SpinelNCPInstance::regsiter_all_get_handlers(void)
 	register_get_handler_spinel_unpacker(
 		kWPANTUNDProperty_ThreadPendingDatasetAsValMap,
 		SPINEL_PROP_THREAD_PENDING_DATASET, boost::bind(unpack_dataset, _1, _2, _3, /* as_val_map */ true));
+	register_get_handler_spinel_unpacker(
+		kWPANTUNDProperty_ThreadPrimaryBbr,
+		SPINEL_PROP_THREAD_PRIMARY_BBR_DATASET, boost::bind(unpack_bbr_dataset, _1, _2, _3, /* as_val_map */ false));
+	register_get_handler_spinel_unpacker(
+		kWPANTUNDProperty_ThreadLocalBbr,
+		SPINEL_PROP_THREAD_LOCAL_BBR_DATASET, boost::bind(unpack_bbr_dataset, _1, _2, _3, /* as_val_map */ false));
+	register_get_handler_spinel_unpacker(
+		kWPANTUNDProperty_ThreadDomainPrefix,
+		SPINEL_PROP_THREAD_DOMAIN_PREFIX, boost::bind(unpack_domain_prefix, _1, _2, _3, /* as_val_map */ false));
 	register_get_handler_spinel_unpacker(
 		kWPANTUNDProperty_ThreadParent,
 		SPINEL_PROP_THREAD_PARENT,
@@ -2761,6 +2827,15 @@ SpinelNCPInstance::regsiter_all_set_handlers(void)
 	register_set_handler_spinel(
 		kWPANTUNDProperty_ThreadRouterDowngradeThreshold,
 		SPINEL_PROP_THREAD_ROUTER_DOWNGRADE_THRESHOLD, SPINEL_DATATYPE_UINT8_C);
+	register_set_handler_spinel(
+		kWPANTUNDProperty_ThreadDomainName,
+		SPINEL_PROP_THREAD_DOMAIN_NAME, SPINEL_DATATYPE_UTF8_C);
+	register_set_handler_spinel(
+		kWPANTUNDProperty_ThreadBackboneInterface,
+		SPINEL_PROP_THREAD_BACKBONE_INTERFACE, SPINEL_DATATYPE_BOOL_C);
+	register_set_handler_spinel(
+		kWPANTUNDProperty_ThreadBackboneCoapPort,
+		SPINEL_PROP_THREAD_BACKBONE_COAP_PORT, SPINEL_DATATYPE_UINT16_C);
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Properties requiring persistence (saving in settings) and associated with a
@@ -2983,6 +3058,21 @@ SpinelNCPInstance::regsiter_all_set_handlers(void)
 	register_set_handler(
 		kWPANTUNDProperty_DatasetCommand,
 		boost::bind(&SpinelNCPInstance::set_prop_DatasetCommand, this, _1, _2));
+	register_set_handler(
+		kWPANTUNDProperty_ThreadDomainPrefix,
+		boost::bind(&SpinelNCPInstance::set_prop_ThreadDomainPrefix, this, _1, _2));
+	register_set_handler(
+		kWPANTUNDProperty_BbrSequenceNumber,
+		boost::bind(&SpinelNCPInstance::set_prop_BbrSequenceNumber, this, _1, _2));
+	register_set_handler(
+		kWPANTUNDProperty_BbrReregistrationDelay,
+		boost::bind(&SpinelNCPInstance::set_prop_BbrReregistrationDelay, this, _1, _2));
+	register_set_handler(
+		kWPANTUNDProperty_BbrMlrTimeout,
+		boost::bind(&SpinelNCPInstance::set_prop_BbrMlrTimeout, this, _1, _2));
+	register_set_handler(
+		kWPANTUNDProperty_ThreadLocalBbr,
+		boost::bind(&SpinelNCPInstance::set_prop_ThreadLocalBbr, this, _1, _2));
 	register_set_handler(
 		kWPANTUNDProperty_DaemonTickleOnHostDidWake,
 		boost::bind(&SpinelNCPInstance::set_prop_DaemonTickleOnHostDidWake, this, _1, _2));
@@ -3372,6 +3462,96 @@ void
 SpinelNCPInstance::set_prop_DatasetCommand(const boost::any &value, CallbackWithStatus cb)
 {
 	perform_dataset_command(any_to_string(value), cb);
+}
+
+void
+SpinelNCPInstance::set_prop_ThreadDomainPrefix(const boost::any &value, CallbackWithStatus cb)
+{
+	Data packet = any_to_data(value);
+
+	if (packet.size() >= sizeof(uint8_t) * 2 + sizeof(in6_addr)) {
+		in6_addr prefix;
+		uint8_t prefixLen;
+		uint8_t flags;
+		uint8_t offset = 0;
+		memcpy(prefix.s6_addr, &packet[offset], sizeof(in6_addr));
+		offset += sizeof(in6_addr);
+		prefixLen = packet[offset++];
+		flags = packet[offset];
+
+		SpinelNCPTaskSendCommand::Factory factory(this);
+
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
+
+		factory.add_command(SpinelPackData(
+			SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(
+				SPINEL_DATATYPE_IPv6ADDR_S  // Prefix
+				SPINEL_DATATYPE_UINT8_S    // Prefix length
+				SPINEL_DATATYPE_UINT8_S    // Prefix flags
+			),
+			SPINEL_PROP_THREAD_DOMAIN_PREFIX,
+			&prefix,
+			prefixLen,
+			flags
+		));
+
+	start_new_task(factory.finish());
+
+	} else {
+		cb(kWPANTUNDStatus_InvalidArgument);
+	}
+}
+
+void
+SpinelNCPInstance::set_prop_BbrSequenceNumber(const boost::any &value, CallbackWithStatus cb)
+{
+	mBbrDataset.mSequenceNumber.set(static_cast<uint8_t>(any_to_int(value)));
+	cb(kWPANTUNDStatus_Ok);
+}
+
+void
+SpinelNCPInstance::set_prop_BbrReregistrationDelay(const boost::any &value, CallbackWithStatus cb)
+{
+	mBbrDataset.mReregistrationDelay.set(static_cast<uint16_t>(any_to_int(value)));
+	cb(kWPANTUNDStatus_Ok);
+}
+
+void
+SpinelNCPInstance::set_prop_BbrMlrTimeout(const boost::any &value, CallbackWithStatus cb)
+{
+	mBbrDataset.mMlrTimeout.set(static_cast<uint32_t>(any_to_int(value)));
+	cb(kWPANTUNDStatus_Ok);
+}
+
+void
+SpinelNCPInstance::set_prop_ThreadLocalBbr(const boost::any &value, CallbackWithStatus cb)
+{
+	bool onoff = any_to_bool(value);
+	if (onoff)
+	{
+		Data frame;
+		mBbrDataset.convert_to_spinel_frame(frame);
+		SpinelNCPTaskSendCommand::Factory factory(this);
+
+		factory.set_lock_property(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE);
+		factory.set_callback(cb);
+
+		factory.add_command(SpinelPackData(
+ 						SPINEL_FRAME_PACK_CMD_PROP_VALUE_SET(SPINEL_DATATYPE_DATA_S),
+ 						SPINEL_PROP_THREAD_LOCAL_BBR_DATASET,
+ 						frame.data(),
+ 						frame.size()
+ 						));
+
+		start_new_task(factory.finish());
+	}
+	else
+	{
+		// equivalent of 'erase' op on cache.
+		mBbrDataset.clear();
+		cb(kWPANTUNDStatus_Ok);
+	}
 }
 
 void
@@ -4632,6 +4812,67 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		} else {
 			syslog(LOG_WARNING, "[-NCP-]: Failed to unpack network time update");
 		}
+	} else if (key == SPINEL_PROP_THREAD_DOMAIN_NAME) {
+		const char* value = NULL;
+		spinel_ssize_t len = spinel_datatype_unpack(value_data_ptr, value_data_len, "U", &value);
+
+		if ((len <= 0) || (value == NULL)) {
+			syslog(LOG_CRIT, "[-NCP-]: Got a corrupted Domain Name");
+			// TODO: Properly handle NCP Misbehavior
+			change_ncp_state(FAULT);
+		} else {
+			syslog(LOG_INFO, "[-NCP-]: Domain name \"%s\"", value);
+			if (mCurrentNetworkInstance.domainname != value)
+			{
+				mCurrentNetworkInstance.domainname = value;
+				signal_property_changed(kWPANTUNDProperty_ThreadDomainName, mCurrentNetworkInstance.domainname);
+			}
+		}
+
+	} else if (key == SPINEL_PROP_THREAD_BACKBONE_COAP_PORT) {
+		uint16_t port;
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT16_S, &port);
+		syslog(LOG_CRIT, "[-NCP-]: Backbone coap port: %u", port);
+		signal_property_changed(kWPANTUNDProperty_ThreadBackboneCoapPort, port);
+
+	} else if (key == SPINEL_PROP_THREAD_LOCAL_BBR_DATASET) {
+		ThreadBbrDataset bbrData;
+		std::list<std::string> list;
+		bbrData.set_from_spinel_frame(value_data_ptr, value_data_len);
+		bbrData.convert_to_string_list(list);
+		syslog(LOG_CRIT, "[-NCP-]: local bbr dataset");
+		for (std::list<std::string>::iterator it = list.begin(); it != list.end(); it++)
+		{
+		syslog(LOG_CRIT, "[-NCP-]: %s", (*it).c_str());
+		}
+
+		{
+			Data data;
+			data.push_back(bbrData.mSequenceNumber.get());
+			// pack the reregistration delay in big endian.
+			data.push_back(bbrData.mReregistrationDelay.get() >> 8);
+			data.push_back(bbrData.mReregistrationDelay.get() & 0xff);
+
+			// pack the mlr timeout in big endian.
+			data.push_back(bbrData.mMlrTimeout.get() >> 24);
+			data.push_back(bbrData.mMlrTimeout.get() >> 16);
+			data.push_back(bbrData.mMlrTimeout.get() >> 8);
+			data.push_back(bbrData.mMlrTimeout.get() & 0xff);
+
+			signal_property_changed(kWPANTUNDProperty_ThreadLocalBbr, data);
+		}
+
+	} else if (key == SPINEL_PROP_THREAD_DOMAIN_PREFIX) {
+		struct in6_addr prefix_addr;
+		memset(&prefix_addr, 0, sizeof(struct in6_addr));
+		memcpy(&prefix_addr, value_data_ptr, value_data_len);
+
+		syslog(LOG_INFO, "[-NCP-] Domain Prefix %s/64", in6_addr_to_string(prefix_addr).c_str());
+
+		if ((value_data_len == 8) && 0 != memcmp(value_data_ptr, mNCPV6DomainPrefix, 8)) {
+			memcpy(mNCPV6DomainPrefix, value_data_ptr, value_data_len);
+			signal_property_changed(kWPANTUNDProperty_ThreadDomainPrefix, in6_addr_to_string(prefix_addr) + "/64");
+		}
 	}
 
 bail:
@@ -4674,6 +4915,17 @@ SpinelNCPInstance::handle_ncp_spinel_value_inserted(spinel_prop_key_t key, const
 			syslog(LOG_INFO, "[-NCP-]: ChildTable entry added: %s", child_entry.get_as_string().c_str());
 		}
 
+		/*
+	} else if (key == SPINEL_PROP_THREAD_GROUP_TABLE) {
+		SpinelNCPTaskGetNetworkTopology::TableEntry child_entry;
+		int status;
+
+		status = SpinelNCPTaskGetNetworkTopology::parse_child_entry(value_data_ptr, value_data_len, child_entry);
+
+		if (status == kWPANTUNDStatus_Ok) {
+			syslog(LOG_INFO, "[-NCP-]: ChildTable entry added: %s", child_entry.get_as_string().c_str());
+		}
+		*/
 	} else if (key == SPINEL_PROP_MESHCOP_COMMISSIONER_ENERGY_SCAN_RESULT) {
 		spinel_ssize_t len;
 		uint32_t channel_mask;
