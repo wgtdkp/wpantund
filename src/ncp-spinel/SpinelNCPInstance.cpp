@@ -4840,24 +4840,28 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		ThreadBbrDataset bbrData;
 		std::list<std::string> list;
 		bbrData.set_from_spinel_frame(value_data_ptr, value_data_len);
-		bbrData.convert_to_string_list(list);
-		syslog(LOG_CRIT, "[-NCP-]: local bbr dataset");
-		for (std::list<std::string>::iterator it = list.begin(); it != list.end(); it++)
+
 		{
-			syslog(LOG_CRIT, "[-NCP-]: %s", (*it).c_str());
+			data.push_back(bbrData.mSequenceNumber.get());
+
+			// pack the reregistration delay in big endian.
+			data.push_back(bbrData.mReregistrationDelay.get() >> 8);
+			data.push_back(bbrData.mReregistrationDelay.get() & 0xff);
+
+			// pack the mlr timeout in big endian.
+			data.push_back(bbrData.mMlrTimeout.get() >> 24);
+			data.push_back(bbrData.mMlrTimeout.get() >> 16);
+			data.push_back(bbrData.mMlrTimeout.get() >> 8);
+			data.push_back(bbrData.mMlrTimeout.get() & 0xff);
 		}
-
-		data.push_back(bbrData.mSequenceNumber.get());
-
-		// pack the reregistration delay in big endian.
-		data.push_back(bbrData.mReregistrationDelay.get() >> 8);
-		data.push_back(bbrData.mReregistrationDelay.get() & 0xff);
-
-		// pack the mlr timeout in big endian.
-		data.push_back(bbrData.mMlrTimeout.get() >> 24);
-		data.push_back(bbrData.mMlrTimeout.get() >> 16);
-		data.push_back(bbrData.mMlrTimeout.get() >> 8);
-		data.push_back(bbrData.mMlrTimeout.get() & 0xff);
+		{
+			bbrData.convert_to_string_list(list);
+			syslog(LOG_CRIT, "[-NCP-]: local bbr dataset");
+			for (std::list<std::string>::iterator it = list.begin(); it != list.end(); it++)
+			{
+				syslog(LOG_CRIT, "[-NCP-]: %s", (*it).c_str());
+			}
+		}
 
 		signal_property_changed(kWPANTUNDProperty_ThreadLocalBbr, data);
 
