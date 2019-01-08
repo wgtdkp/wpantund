@@ -1707,7 +1707,7 @@ SpinelNCPInstance::regsiter_all_get_handlers(void)
 	register_get_handler_spinel_simple(
 		kWPANTUNDProperty_ThreadDomainName,
 		SPINEL_PROP_THREAD_DOMAIN_NAME, SPINEL_DATATYPE_UTF8_S);
-	register_get_handler_spinel(
+	register_get_handler_spinel_simple(
 		kWPANTUNDProperty_ThreadBackboneInterface,
 		SPINEL_PROP_THREAD_BACKBONE_INTERFACE, SPINEL_DATATYPE_BOOL_S);
 	register_get_handler_spinel_simple(
