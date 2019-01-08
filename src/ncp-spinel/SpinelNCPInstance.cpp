@@ -4836,24 +4836,11 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		signal_property_changed(kWPANTUNDProperty_ThreadBackboneCoapPort, port);
 
 	} else if (key == SPINEL_PROP_THREAD_LOCAL_BBR_DATASET) {
-		Data data;
 		ThreadBbrDataset bbrData;
 		std::list<std::string> list;
+		std::vector<uint8_t> data;
+
 		bbrData.set_from_spinel_frame(value_data_ptr, value_data_len);
-
-		{
-			data.push_back(bbrData.mSequenceNumber.get());
-
-			// pack the reregistration delay in big endian.
-			data.push_back(bbrData.mReregistrationDelay.get() >> 8);
-			data.push_back(bbrData.mReregistrationDelay.get() & 0xff);
-
-			// pack the mlr timeout in big endian.
-			data.push_back(bbrData.mMlrTimeout.get() >> 24);
-			data.push_back(bbrData.mMlrTimeout.get() >> 16);
-			data.push_back(bbrData.mMlrTimeout.get() >> 8);
-			data.push_back(bbrData.mMlrTimeout.get() & 0xff);
-		}
 		{
 			bbrData.convert_to_string_list(list);
 			syslog(LOG_CRIT, "[-NCP-]: local bbr dataset");
@@ -4863,7 +4850,20 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 			}
 		}
 
-		signal_property_changed(kWPANTUNDProperty_ThreadLocalBbr, data);
+		{
+			data.push_back(bbrData.mSequenceNumber.get());
+			// pack the reregistration delay in big endian.
+			data.push_back(bbrData.mReregistrationDelay.get() >> 8);
+			data.push_back(bbrData.mReregistrationDelay.get() & 0xff);
+
+			// pack the mlr timeout in big endian.
+			data.push_back(bbrData.mMlrTimeout.get() >> 24);
+			data.push_back(bbrData.mMlrTimeout.get() >> 16);
+			data.push_back(bbrData.mMlrTimeout.get() >> 8);
+			data.push_back(bbrData.mMlrTimeout.get() & 0xff);
+
+			signal_property_changed(kWPANTUNDProperty_ThreadLocalBbr, data);
+		}
 
 	} else if (key == SPINEL_PROP_THREAD_DOMAIN_PREFIX) {
 		struct in6_addr prefix_addr;
