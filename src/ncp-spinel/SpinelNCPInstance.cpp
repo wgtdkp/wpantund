@@ -1798,7 +1798,7 @@ SpinelNCPInstance::regsiter_all_get_handlers(void)
 		SPINEL_PROP_THREAD_BACKBONE_COAP_PORT, SPINEL_DATATYPE_UINT16_S);
 	register_get_handler_spinel_simple(
 		kWPANTUNDProperty_ThreadPrimaryState,
-		SPINEL_PROP_THREAD_BACKBONE_ROUTER_PRIMARY_STATE, SPINEL_DATATYPE_UINT8_S);
+		SPINEL_PROP_THREAD_BACKBONE_ROUTER_PRIMARY_STATE, SPINEL_DATATYPE_BOOL_S);
 	register_get_handler_spinel_simple(
 		kWPANTUNDProperty_ThreadBbrGroupTable,
 		SPINEL_PROP_THREAD_GROUP_TABLE, SPINEL_DATATYPE_DATA_S);
@@ -5124,8 +5124,8 @@ SpinelNCPInstance::handle_ncp_spinel_value_is(spinel_prop_key_t key, const uint8
 		signal_property_changed(kWPANTUNDProperty_ThreadBackboneCoapPort, port);
 	} else if (key == SPINEL_PROP_THREAD_BACKBONE_ROUTER_PRIMARY_STATE) {
 		uint8_t state;
-		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT8_S, &state);
-		syslog(LOG_CRIT, "[-NCP-]: BBR State: %s", state > 0 ? "Priamry" : "Secondary");
+		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_BOOL_S, &state);
+		syslog(LOG_CRIT, "[-NCP-]: BBR State: %s", state ? "Priamry" : "Secondary");
 		signal_property_changed(kWPANTUNDProperty_ThreadPrimaryState, state);
 
 	} else if (key == SPINEL_PROP_THREAD_BACKBONE_ROUTER_LOCAL) {
