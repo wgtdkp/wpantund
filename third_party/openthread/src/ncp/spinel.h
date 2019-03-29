@@ -285,6 +285,7 @@ enum
     SPINEL_THREAD_MODE_FULL_THREAD_DEV     = (1 << 1),
     SPINEL_THREAD_MODE_SECURE_DATA_REQUEST = (1 << 2),
     SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE     = (1 << 3),
+    SPINEL_THREAD_MODE_WAKE_ON_RADIO       = (1 << 4),
 };
 
 enum
@@ -345,7 +346,9 @@ enum
     SPINEL_NCP_LOG_REGION_OT_CLI      = 14,
     SPINEL_NCP_LOG_REGION_OT_CORE     = 15,
     SPINEL_NCP_LOG_REGION_OT_UTIL     = 16,
-    SPINEL_NCP_LOG_REGION_OT_BH       = 17,
+    SPINEL_NCP_LOG_REGION_OT_BBR      = 17,
+    SPINEL_NCP_LOG_REGION_OT_DUA      = 18,
+    SPINEL_NCP_LOG_REGION_OT_MLR      = 19,
 };
 
 enum
@@ -3676,11 +3679,11 @@ typedef char spinel_datatype_t;
 #define SPINEL_MAX_UINT_PACKED 2097151
 
 SPINEL_API_EXTERN spinel_ssize_t spinel_datatype_pack(uint8_t *     data_out,
-                                                      spinel_size_t data_len,
+                                                      spinel_size_t data_len_max,
                                                       const char *  pack_format,
                                                       ...);
 SPINEL_API_EXTERN spinel_ssize_t spinel_datatype_vpack(uint8_t *     data_out,
-                                                       spinel_size_t data_len,
+                                                       spinel_size_t data_len_max,
                                                        const char *  pack_format,
                                                        va_list       args);
 SPINEL_API_EXTERN spinel_ssize_t spinel_datatype_unpack(const uint8_t *data_in,
@@ -3748,7 +3751,7 @@ SPINEL_API_EXTERN spinel_ssize_t spinel_datatype_vunpack_in_place(const uint8_t 
 
 SPINEL_API_EXTERN spinel_ssize_t spinel_packed_uint_decode(const uint8_t *bytes,
                                                            spinel_size_t  len,
-                                                           unsigned int * value);
+                                                           unsigned int * value_ptr);
 SPINEL_API_EXTERN spinel_ssize_t spinel_packed_uint_encode(uint8_t *bytes, spinel_size_t len, unsigned int value);
 SPINEL_API_EXTERN spinel_ssize_t spinel_packed_uint_size(unsigned int value);
 
