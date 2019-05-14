@@ -3579,7 +3579,7 @@ void
 SpinelNCPInstance::set_prop_DatasetSecPolicyFlags(const boost::any &value, CallbackWithStatus cb)
 {
 	ThreadDataset::SecurityPolicy policy = mLocalDataset.mSecurityPolicy.get();
-	policy.mFlags = static_cast<uint8_t>(any_to_int(value));
+	policy.mFlags = static_cast<uint16_t>(any_to_int(value));
 	mLocalDataset.mSecurityPolicy = policy;
 	cb(kWPANTUNDStatus_Ok);
 }

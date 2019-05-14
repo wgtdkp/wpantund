@@ -433,7 +433,7 @@ ThreadDataset::parse_dataset_entry(const uint8_t *data_in, spinel_size_t data_le
 				value_len,
 				(
 					SPINEL_DATATYPE_UINT16_S
-					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_UINT16_S
 				),
 				&sec_policy.mKeyRotationTime,
 				&sec_policy.mFlags
@@ -674,7 +674,7 @@ ThreadDataset::convert_to_spinel_frame(Data &frame, bool include_value)
 				SPINEL_DATATYPE_STRUCT_S(
 					SPINEL_DATATYPE_UINT_PACKED_S
 					SPINEL_DATATYPE_UINT16_S
-					SPINEL_DATATYPE_UINT8_S
+					SPINEL_DATATYPE_UINT16_S
 				),
 				SPINEL_PROP_DATASET_SECURITY_POLICY,
 				mSecurityPolicy.get().mKeyRotationTime,
